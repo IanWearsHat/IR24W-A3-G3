@@ -13,7 +13,7 @@ function App() {
   return (
     <>
       <SearchBar />
-      <Results />
+      <Results results=""/>
       <Summary />
     </>
   );
