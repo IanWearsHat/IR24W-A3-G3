@@ -21,7 +21,7 @@ def handleOneFile(file_path):
         for word in text: #iterate the word in the text
             token = porter_stemmer.stem(word)# transform word to token
             # set default value to 1 and this need be modified in the following milestones
-            one_file_word_freq[token] = 1
+            one_file_word_freq[word] = 1
     return url, one_file_word_freq, text
 
 
