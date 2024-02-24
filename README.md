@@ -19,5 +19,10 @@ cd api
 pip install -r requirements.txt
 
 5. 
+Get .env file from someone
+Or create one on your own with a Google MakerSuite API key
+Set like so: GOOGLE_API_KEY=your_key
+
+Either way, put .env file in the api folder
 
 python src/main.py
