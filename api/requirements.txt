@@ -6,3 +6,4 @@ langchain-community
 langchain-google-genai
 bs4
 python-dotenv
+nltk
