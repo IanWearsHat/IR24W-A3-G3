@@ -22,13 +22,13 @@ Making actual index:
     {
         "token": {
             docID: [
-                tf_score,
                 [3, 4, 8, ... , position],
+                tf_score,
                 tf_idf_score -----------------# calculated later : len(index[token].keys()) / totalDocCount
             ],
             docID2: [
-                tf_score,
                 [other positions],
+                tf_score,
                 tf_idf_score
             ]
         }
@@ -37,6 +37,8 @@ Making actual index:
 
 
 class Indexer:
+    orig_dir = os.getcwd()
+
     stemmer = PorterStemmer()
     inv_index = dict()
     docID_map = dict()
@@ -52,10 +54,11 @@ class Indexer:
         self.docID_map[self.docID_count] = url
 
     def _update_inv_index(self, one_file_map):
-        for token, freq in one_file_map.items():
+        for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
             posting_list = token_doc_dict.setdefault(self.docID_count, list())
-            posting_list.append(freq)
+            for elem in posting:
+                posting_list.append(elem)
 
     def _get_one_file_token_freq(self, file_path):
         """
@@ -70,11 +73,23 @@ class Indexer:
             content = file_content["content"]  # extract content
             text = BeautifulSoup(content, "lxml").get_text()  # parse html contents
 
-            for word in text.split():  # iterate the word in the text
+            # TODO: potential optimization: removing hyphens, periods, paranthese, etc.
+            # keep in mind the complexities involved. ex. co-chair needs to be together and can't be split
+            split_text = text.split()
+            for i in range(len(split_text)):  # iterate the word in the text
+                word = split_text[i]
                 token = self.stemmer.stem(word)
-                # set default count of token to zero and then increment
-                one_file_word_freq.setdefault(token, 0)
-                one_file_word_freq[token] += 1
+
+                one_file_word_freq.setdefault(token, list())
+
+                posting = one_file_word_freq[token]
+
+                if len(posting) == 0:
+                    posting.append(list())
+                    posting.append(0)
+
+                posting[0].append(i)
+                posting[1] += 1
 
         return url, one_file_word_freq
 
@@ -101,18 +116,30 @@ class Indexer:
 
         self._write_dict_to_file(self.inv_index, self._index_file_name)
         self._write_dict_to_file(self.docID_map, self._docID_file_name)
+
+        os.chdir(self.orig_dir)
     
     def get_document_count(self) -> int:
         """Counts through all files in each subdirectory"""
         os.chdir(self._dir_name)
+
         counter = 0
         for _dir in os.listdir():
             for _ in os.listdir(_dir):
                 counter += 1
+        
+        os.chdir(self.orig_dir)
         return counter
 
 
 if __name__ == "__main__":
-    indexer = Indexer("DEV", "inv_index.json", "doc_ID_map.json")
+    is_test = True
+
+    if is_test:
+        directory = "TEST"
+    else:
+        directory = "DEV"
+
+    indexer = Indexer(directory, directory + "_inv_index.json", directory + "_doc_ID_map.json")
     indexer.create_index()
     print("Document Count:", indexer.get_document_count())
