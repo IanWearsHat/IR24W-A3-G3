@@ -4,6 +4,7 @@ python-multipart==0.0.6
 langchain
 langchain-community
 langchain-google-genai
+lxml
 bs4
 python-dotenv
 nltk
