@@ -1,7 +1,6 @@
+import math
 import os
-import sys
 import json
-import warnings
 from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
 
@@ -23,12 +22,12 @@ Making actual index:
         "token": {
             docID: [
                 [3, 4, 8, ... , position],
-                tf_score,
-                tf_idf_score -----------------# calculated later : len(index[token].keys()) / totalDocCount
+                term_frequency,
+                tf_idf_score -----------------# calculated in update_tf_idf_scores
             ],
             docID2: [
                 [other positions],
-                tf_score,
+                term_frequency,
                 tf_idf_score
             ]
         }
@@ -50,6 +49,8 @@ class Indexer:
         self._index_file_name = index_file_name
         self._docID_file_name = docID_file_name
 
+        self._total_doc_count = self.get_document_count()
+
     def _update_docID_map(self, url):
         self.docID_map[self.docID_count] = url
 
@@ -60,18 +61,30 @@ class Indexer:
             for elem in posting:
                 posting_list.append(elem)
 
+    def _update_tf_idf_scores(self):
+        for posting_dict in self.inv_index.values():
+            num_docs = len(posting_dict.values())
+            idf_score = math.log(self._total_doc_count / num_docs)
+            for posting_list in posting_dict.values():
+                # posting_list[2] is initially the total number of words in the document
+                tf_score = posting_list[1] / posting_list[2]
+                tf_idf_score = tf_score * idf_score
+                posting_list[2] = tf_idf_score
+
     def _get_one_file_token_freq(self, file_path):
         """
         Parse one file
         :param file_path: the input file path
-        :return: the url, word frequency in the file, the text after porter stemmer
+        :return: the url, word frequency in the file
         """
         one_file_word_freq = {}
         with open(file_path, "r") as fr:
             file_content = json.load(fr)  # load json file
             url = file_content["url"]  # extract url
             content = file_content["content"]  # extract content
-            text = BeautifulSoup(content, "lxml").get_text()  # parse html contents
+            text = BeautifulSoup(
+                content, features="lxml"
+            ).get_text()  # parse html contents
 
             # TODO: potential optimization: removing hyphens, periods, paranthese, etc.
             # keep in mind the complexities involved. ex. co-chair needs to be together and can't be split
@@ -87,6 +100,9 @@ class Indexer:
                 if len(posting) == 0:
                     posting.append(list())
                     posting.append(0)
+                    # initially make posting[2] the number of words in the text
+                    # This will be changed when update_tf_idf_scores is called
+                    posting.append(len(split_text))
 
                 posting[0].append(i)
                 posting[1] += 1
@@ -100,10 +116,9 @@ class Indexer:
             json_writer.write(json_data)
 
     def create_index(self) -> None:
-        # might need to change directory back to original
         os.chdir(self._dir_name)
 
-        for _dir in os.listdir():  # iterate all directories and files
+        for _dir in os.listdir():
             for file in os.listdir(_dir):
                 file_path = os.path.join(_dir, file)
 
@@ -114,11 +129,13 @@ class Indexer:
 
                 self.docID_count += 1
 
+        self._update_tf_idf_scores()
+
         self._write_dict_to_file(self.inv_index, self._index_file_name)
         self._write_dict_to_file(self.docID_map, self._docID_file_name)
 
         os.chdir(self.orig_dir)
-    
+
     def get_document_count(self) -> int:
         """Counts through all files in each subdirectory"""
         os.chdir(self._dir_name)
@@ -127,7 +144,7 @@ class Indexer:
         for _dir in os.listdir():
             for _ in os.listdir(_dir):
                 counter += 1
-        
+
         os.chdir(self.orig_dir)
         return counter
 
@@ -140,6 +157,8 @@ if __name__ == "__main__":
     else:
         directory = "DEV"
 
-    indexer = Indexer(directory, directory + "_inv_index.json", directory + "_doc_ID_map.json")
+    indexer = Indexer(
+        directory, directory + "_inv_index.json", directory + "_doc_ID_map.json"
+    )
     indexer.create_index()
     print("Document Count:", indexer.get_document_count())
