@@ -35,7 +35,7 @@ Making actual index:
     }
 """
 
-# I like computer science
+
 class Indexer:
     orig_dir = os.getcwd()
 
@@ -55,7 +55,7 @@ class Indexer:
     def _update_docID_map(self, url):
         self.docID_map[self.docID_count] = url
 
-        # 'hello': [('url1', 1.0), ('url2', 2.0), ('url3', 2.0)]
+       
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
