@@ -147,13 +147,35 @@ class Indexer:
 
         os.chdir(self.orig_dir)
         return counter
+    def process_query(self, query):
+    
+        query_terms = query.lower().split()
+        stemmed_query_terms = [self.stemmer.stem(term) for term in query_terms]
+
+        postings_lists = []
+        for term in stemmed_query_terms:
+            if term in self.inv_index:
+                postings_lists.append(set(self.inv_index[term].keys()))
+               
+            else:
+                return [] 
+        
+      
+        common_doc_ids = set.intersection(*postings_lists) if postings_lists else set()
+        
+        
+        # urls = [self.docID_map[doc_id] for doc_id in common_doc_ids]
+
+       
+        return common_doc_ids
+
 
 
 if __name__ == "__main__":
     is_test = True
 
     if is_test:
-        directory = "TEST"
+        directory = "ANALYST"
     else:
         directory = "DEV"
 
@@ -162,3 +184,13 @@ if __name__ == "__main__":
     )
     indexer.create_index()
     print("Document Count:", indexer.get_document_count())
+
+    # Define a list of test queries
+    test_queries = ["cristina lopes", "machine learning", "ACM", "master of software engineering"]
+
+    # Process each query and print the results
+    for query in test_queries:
+        print(f"Processing query: {query}")
+        result_docs = indexer.process_query(query)
+        print(f"Documents intersection found: {result_docs}\n")
+
