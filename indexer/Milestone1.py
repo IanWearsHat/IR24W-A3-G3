@@ -3,6 +3,7 @@ import os
 import json
 from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
+import numpy as np
 
 """
 Making actual index:
@@ -34,7 +35,7 @@ Making actual index:
     }
 """
 
-
+# I like computer science
 class Indexer:
     orig_dir = os.getcwd()
 
@@ -54,6 +55,7 @@ class Indexer:
     def _update_docID_map(self, url):
         self.docID_map[self.docID_count] = url
 
+        # 'hello': [('url1', 1.0), ('url2', 2.0), ('url3', 2.0)]
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
@@ -168,6 +170,29 @@ class Indexer:
 
        
         return common_doc_ids
+
+
+
+
+def cosine_similarity(vec1, vec2):
+    """
+    Calculate the cosine similarity of two tf-idf score vector
+    - vec1: this is a numpy array which means the first tf-idf score vector of one document
+    - vec2: this is a numpy array which means the second tf-idf score vector of one document
+    Returns:
+    - cosine similarity as a float.
+    For example: 
+    vec1 = np.array([1,2,3])
+    vec2 = np.array([4,5,6])
+    similarity = cosine_similarity(vec1, vec2)
+    the docunment is the content in json after we run the M1 part code. 
+    """
+
+    dot_product = np.dot(vec1, vec2)
+    norm_vec1 = np.linalg.norm(vec1)
+    norm_vec2 = np.linalg.norm(vec2)
+    similarity = dot_product / (norm_vec1 * norm_vec2)
+    return similarity
 
 
 
