@@ -159,7 +159,13 @@ def cosine_similarity(vec1, vec2):
     - vec2: this is a numpy array which means the second tf-idf score vector of one document
     Returns:
     - cosine similarity as a float.
+    For example: 
+    vec1 = np.array([1,2,3])
+    vec2 = np.array([4,5,6])
+    similarity = cosine_similarity(vec1, vec2)
+    the docunment is the content in json after we run the M1 part code. 
     """
+
     dot_product = np.dot(vec1, vec2)
     norm_vec1 = np.linalg.norm(vec1)
     norm_vec2 = np.linalg.norm(vec2)
