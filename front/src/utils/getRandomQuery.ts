@@ -9,7 +9,14 @@ export function getRandomQuery() {
     "how to relax",
     "Order 66",
     "Warren Hue",
-    "Vibranium"
+    "Vibranium",
+    "WD40",
+    "Pineapple Kryptonite",
+    "Lilas Ikuta",
+    "Donald Glover",
+    "Lobot",
+    "what are centimeters",
+    "chicken and broccoli"
   ];
   const i = Math.floor(Math.random() * queries.length);
   return queries[i];
