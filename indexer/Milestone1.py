@@ -33,6 +33,11 @@ Making actual index:
         }
     }
 """
+# TODO: text in bold, in headings, and in titles should be treated as more important
+
+# TODO: IMPORTANT, MUST USE PARTIAL INDEX AT LEAST 3 TIMES, which are all merged in the end
+
+# SEARCH ALSO CANNOT LOAD ALL INDEX INTO MAIN MEMORY
 
 
 class Indexer:
