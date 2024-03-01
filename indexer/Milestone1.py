@@ -154,27 +154,7 @@ class Indexer:
 
         os.chdir(self.orig_dir)
         return counter
-    def process_query(self, query):
     
-        query_terms = query.lower().split()
-        stemmed_query_terms = [self.stemmer.stem(term) for term in query_terms]
-
-        postings_lists = []
-        for term in stemmed_query_terms:
-            if term in self.inv_index:
-                postings_lists.append(set(self.inv_index[term].keys()))
-               
-            else:
-                return [] 
-        
-      
-        common_doc_ids = set.intersection(*postings_lists) if postings_lists else set()
-        
-        
-        # urls = [self.docID_map[doc_id] for doc_id in common_doc_ids]
-
-       
-        return common_doc_ids
 
 
 

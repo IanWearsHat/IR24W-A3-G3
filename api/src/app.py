@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 
 app = FastAPI()
 
@@ -22,7 +22,8 @@ structure for document return object:
     }
 """
 
+@app.post("/process-query")
+async def process_query(query: str = Form()):
+    print(query)
 
-@app.get("/hello")
-async def root():
-    return {"message": "Hello World"}
+    
