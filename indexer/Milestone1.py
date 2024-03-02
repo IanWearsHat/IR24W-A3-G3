@@ -1,9 +1,10 @@
-import math
-import os
-import json
 from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
 import numpy as np
+import math
+import os
+import json
+import re
 
 """
 Making actual index:
@@ -60,7 +61,6 @@ class Indexer:
     def _update_docID_map(self, url):
         self.docID_map[self.docID_count] = url
 
-       
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
@@ -90,19 +90,20 @@ class Indexer:
             url = file_content["url"]  # extract url
             content = file_content["content"]  # extract content
             text = BeautifulSoup(
-                content, features="lxml"
+                content, features="xml"
             ).get_text()  # parse html contents
 
             # TODO: potential optimization: removing hyphens, periods, paranthese, etc.
             # keep in mind the complexities involved. ex. co-chair needs to be together and can't be split
+            text = re.sub(r"[\W_]+", " ", text)
             split_text = text.split()
             for i in range(len(split_text)):  # iterate the word in the text
                 word = split_text[i]
-                token = self.stemmer.stem(word)
+                # token = self.stemmer.stem(word)
 
-                one_file_word_freq.setdefault(token, list())
+                one_file_word_freq.setdefault(word, list())
 
-                posting = one_file_word_freq[token]
+                posting = one_file_word_freq[word]
 
                 if len(posting) == 0:
                     posting.append(list())
@@ -131,6 +132,9 @@ class Indexer:
 
                 url, one_file_map = self._get_one_file_token_freq(file_path)
 
+                if (self.docID_count % 1000 == 0):
+                    print(self.docID_count, url)
+
                 self._update_inv_index(one_file_map)
                 self._update_docID_map(url)
 
@@ -154,9 +158,6 @@ class Indexer:
 
         os.chdir(self.orig_dir)
         return counter
-    
-
-
 
 
 def cosine_similarity(vec1, vec2):
@@ -166,11 +167,11 @@ def cosine_similarity(vec1, vec2):
     - vec2: this is a numpy array which means the second tf-idf score vector of one document
     Returns:
     - cosine similarity as a float.
-    For example: 
+    For example:
     vec1 = np.array([1,2,3])
     vec2 = np.array([4,5,6])
     similarity = cosine_similarity(vec1, vec2)
-    the docunment is the content in json after we run the M1 part code. 
+    the docunment is the content in json after we run the M1 part code.
     """
 
     dot_product = np.dot(vec1, vec2)
@@ -180,9 +181,8 @@ def cosine_similarity(vec1, vec2):
     return similarity
 
 
-
 if __name__ == "__main__":
-    is_test = True
+    is_test = False
 
     if is_test:
         directory = "ANALYST"
@@ -195,12 +195,16 @@ if __name__ == "__main__":
     indexer.create_index()
     print("Document Count:", indexer.get_document_count())
 
-    # Define a list of test queries
-    test_queries = ["cristina lopes", "machine learning", "ACM", "master of software engineering"]
+    # # Define a list of test queries
+    # test_queries = [
+    #     "cristina lopes",
+    #     "machine learning",
+    #     "ACM",
+    #     "master of software engineering",
+    # ]
 
-    # Process each query and print the results
-    for query in test_queries:
-        print(f"Processing query: {query}")
-        result_docs = indexer.process_query(query)
-        print(f"Documents intersection found: {result_docs}\n")
-
+    # # Process each query and print the results
+    # for query in test_queries:
+    #     print(f"Processing query: {query}")
+    #     result_docs = indexer.process_query(query)
+    #     print(f"Documents intersection found: {result_docs}\n")
