@@ -1,8 +1,28 @@
 import { getRandomQuery } from "../utils/getRandomQuery";
 
-export default function SearchBar() {
+interface SearchBarProps {
+  onQueryProcessed: (docs: Record<string, Array<string>>) => void;
+}
+
+export default function SearchBar({ onQueryProcessed }: SearchBarProps) {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+      method: form.method,
+      body: formData,
+    })
+      .then((resp) => resp.json())
+      .then((data) => console.log(data));
+
+    onQueryProcessed({ urls: ['1', '2'] });
+  };
+
   return (
-    <form action="/api/process-query" method="post">
+    <form onSubmit={handleSubmit} action="/api/process-query" method="post">
       <input
         name="query"
         placeholder={"Search for " + getRandomQuery()}

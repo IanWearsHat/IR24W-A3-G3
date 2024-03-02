@@ -1,19 +1,17 @@
+import React, { useState } from "react";
+
 import "./App.css";
 import Results from "./components/Results";
 import SearchBar from "./components/SearchBar";
 import Summary from "./components/Summary";
 
 function App() {
-  // function handleClick() {
-  //   fetch("/api/hello")
-  //   .then((response) => response.text())
-  //   .then((data) => console.log(data));
-  // }
+  const [results, setResults] = useState<Record<string, Array<string>>>({});
 
   return (
     <>
-      <SearchBar />
-      <Results results=""/>
+      <SearchBar onQueryProcessed={setResults} />
+      <Results results={results} />
       <Summary />
     </>
   );

@@ -16,7 +16,8 @@ export function getRandomQuery() {
     "Donald Glover",
     "Lobot",
     "what are centimeters",
-    "chicken and broccoli"
+    "chicken and broccoli",
+    "I shop so much I can speak Italian",
   ];
   const i = Math.floor(Math.random() * queries.length);
   return queries[i];

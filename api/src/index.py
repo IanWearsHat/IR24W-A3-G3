@@ -1,12 +1,17 @@
+from nltk.stem import PorterStemmer
 import ijson
+import json
 
 
 class Index:
-    def __init__(self, _index_path):
+    def __init__(self, _index_path, _doc_id_map_path):
         self._index_path = _index_path
-        
-    
+        self._doc_id_map_path = _doc_id_map_path
+
     def _get_term_doc_ids(self, term):
+        stemmer = PorterStemmer()
+        term = term.lower()
+        term = stemmer.stem(term)
         doc_ids = set()
 
         with open(self._index_path, "rb") as f:
@@ -15,18 +20,21 @@ class Index:
 
             started = False
             for prefix, event, value in parser:
-
-                if (prefix.startswith(term + '.') or prefix == term) and event == "map_key":
-                    # print(prefix, event, value)
+                if (
+                    prefix.startswith(term + ".") or prefix == term
+                ) and event == "map_key":
+                    print(prefix, event, value)
                     doc_ids.add(value)
-                
+                # if prefix.startswith(term):
+                #     print(prefix, event, value)
+
                 if prefix == term:
                     if started:
                         if event == "end_map":
                             break
                     else:
                         started = True
-        
+
         return doc_ids
 
     def get_query_intersection(self, query_string):
@@ -42,9 +50,21 @@ class Index:
 
         return common_doc_ids
 
+    def get_top_urls(self, doc_ids: set):
+        urls = []
+        with open(self._doc_id_map_path, "r") as f:
+            d = json.load(f)
+            for id in doc_ids:
+                urls.append(d[id])
+        return urls[:5]
+
 
 if __name__ == "__main__":
-    index = Index("DEV_inv_index.json")
-    print(index.get_query_intersection("cert seed"))
-    # print(index._get_term_doc_ids("ACM"))
-    # issue: ACM returns nothing
+    index = Index("DEV_inv_index.json", "DEV_doc_ID_map.json")
+    input_str = input("Input a query: ")
+    while (input_str != "exit"):
+        doc_ids = index.get_query_intersection(input_str)
+        urls = index.get_top_urls(doc_ids)
+        for url in urls[:5]:
+            print(url)
+        input_str = input("Input a query: ")
