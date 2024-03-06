@@ -83,7 +83,7 @@ if __name__ == "__main__":
             yield current_sequence
 
     # Define the input string
-    input_string = "abc 902-took]bruh b" * 100000  # Repeat for larger input
+    input_string = "abc 902-took]bruh b" * 2  # Repeat for larger input
     iterator = alphanumeric_iterator(input_string)
 
     # Define the regular expression pattern
