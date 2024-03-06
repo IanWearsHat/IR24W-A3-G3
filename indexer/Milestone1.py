@@ -75,6 +75,7 @@ class Indexer:
 
     docID_count = 0
     index_count = 0
+    open_files = []
 
     def __init__(self, dir_name, index_file_name, docID_file_name):
         self._dir_name = dir_name
@@ -84,7 +85,7 @@ class Indexer:
         self._total_doc_count = self.get_document_count()
 
     def _update_docID_map(self, url):
-        self.docID_map[self.docID_count] = url
+        self.docID_map[str(self.docID_count)] = url
 
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
@@ -141,19 +142,22 @@ class Indexer:
         return url, one_file_word_freq
 
     def _write_partial_index_to_file(self, posting_dict, index_num):
+        """Note: also opens files and does not close them as they will be used in merging.
+        The files must be closed with the close_partial_index_files function"""
         positions = {}
-        with open(f"../index/{index_num}.json", "wb") as index_f:
-            for token, posting in posting_dict.items():
-                pos = index_f.tell()
-                positions[token] = pos
+        index_f = open(f"../index/{index_num}.json", "wb+")
+        for token, posting in posting_dict.items():
+            pos = index_f.tell()
+            positions[token] = pos
 
-                to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
-                index_f.write(to_write)
+            to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
+            index_f.write(to_write)
 
-        with open(f"../index/{index_num}_positions.json", "wb") as positions_f:
-            to_write = orjson.dumps(positions)
-            print(len(positions))
-            positions_f.write(to_write)
+        positions_f = open(f"../index/{index_num}_positions.json", "wb+")
+        to_write = orjson.dumps(positions)
+        positions_f.write(to_write)
+
+        self.open_files.append((positions_f, index_f))
 
         # validating output
         # with open(f"../{index_num}.json", "rb") as index_f:
@@ -166,8 +170,8 @@ class Indexer:
 
     def _write_dict_to_file(self, data_dict, file_name):
         """Writes a dict to a file as json"""
-        json_data = json.dumps(data_dict, indent=None, separators=(",", ":"))
-        with open("../" + file_name, "w") as json_writer:
+        json_data = orjson.dumps(data_dict)
+        with open("../index/" + file_name, "wb") as json_writer:
             json_writer.write(json_data)
 
     def create_index(self) -> None:
@@ -194,7 +198,7 @@ class Indexer:
                 self.docID_count += 1
 
                 # dump current inv_index into json file and reset inv_index
-                if self.docID_count % 30 == 0:
+                if self.docID_count % 256 == 0:
                     self._write_partial_index_to_file(self.inv_index, self.index_count)
                     self.inv_index = {}
                     self.index_count += 1
@@ -210,7 +214,88 @@ class Indexer:
         os.chdir(self.orig_dir)
 
     def merge_indexes(self) -> None:
-        curr_index = 0
+        os.chdir("index/")
+        final_index_num = 0
+        final_token_map = {}
+        final_index = {}
+
+        token_count = 0
+        for curr_index in range(len(self.open_files)):
+            positions_f, index_f = self.open_files[curr_index]
+            positions_f.seek(0)
+            index_f.seek(0)
+
+            positions = orjson.loads(positions_f.read())
+            for token in positions.keys():
+                token_pos = positions[token]
+
+                index_f.seek(token_pos)
+
+                line = index_f.readline()
+                token_posting = orjson.loads(line)
+
+                for next_index_num in range(curr_index + 1, len(self.open_files)):
+                    next_pos_f, next_index_f = self.open_files[next_index_num]
+                    next_pos_f.seek(0)
+                    next_index_f.seek(0)
+
+                    next_positions = orjson.loads(next_pos_f.read())
+
+                    if token in next_positions:
+                        next_token_pos = next_positions[token]
+
+                        next_index_f.seek(next_token_pos)
+
+                        line = next_index_f.readline()
+                        next_token_posting = orjson.loads(line)
+
+                        token_posting.update(next_token_posting)
+
+                final_token_map[token] = final_index_num
+                final_index.update({token: token_posting})
+                # break
+                token_count += 1
+                if token_count % 512 == 0:
+                    w_positions = {}
+                    with open(f"{final_index_num}_merged.json", "wb") as final_index_f:
+                        for token, posting in final_index.items():
+                            pos = final_index_f.tell()
+                            w_positions[token] = pos
+
+                            to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
+                            final_index_f.write(to_write)
+
+                    with open(f"{final_index_num}_merged_positions.json", "wb+") as final_positions_f:
+                        to_write = orjson.dumps(w_positions)
+                        final_positions_f.write(to_write)
+
+                    final_index_num += 1
+
+                    final_index = {}
+
+        positions = {}
+        with open(f"{final_index_num}_merged.json", "wb") as final_index_f:
+            for token, posting in final_index.items():
+                pos = final_index_f.tell()
+                positions[token] = pos
+
+                to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
+                final_index_f.write(to_write)
+
+        with open(f"{final_index_num}_merged_positions.json", "wb+") as final_positions_f:
+            to_write = orjson.dumps(positions)
+            final_positions_f.write(to_write)
+        
+        with open("final_token_map.json", "wb") as f:
+            to_write = orjson.dumps(final_token_map)
+            f.write(to_write)
+
+        os.chdir(self.orig_dir)
+
+    def close_partial_index_files(self) -> None:
+        for file_tuple in self.open_files:
+            for file in file_tuple:
+                file.close()
 
     def get_document_count(self) -> int:
         """Counts through all files in each subdirectory"""
@@ -259,22 +344,10 @@ if __name__ == "__main__":
     )
 
     import time
-
-    
-    indexer.create_index()
-    # indexer.merge_indexes()
     past = time.time()
-    index_number = 1
-    with open(f"index/{index_number}_positions.json", "rb") as pos_f:
-        positions = orjson.loads(pos_f.read())
-        token_pos = positions["organs"]
 
-    with open(f"index/{index_number}.json", "rb") as index_f:
-        index_f.seek(token_pos)
-
-        line = index_f.readline()
-        posting = orjson.loads(line)
-        print(posting)
+    indexer.create_index()
+    indexer.merge_indexes()
 
     new = time.time()
     time_taken = new - past
@@ -282,6 +355,32 @@ if __name__ == "__main__":
     print(time_taken, "seconds taken")
     print(time_taken / doc_count, "seconds per doc on average")
     print(doc_count, "documents parsed")
+
+
+    past = time.time()
+
+    query = "wuschel"
+    with open("index/final_token_map.json", "rb") as token_f:
+        tokens = orjson.loads(token_f.read())
+        index_number = tokens[query]
+
+    with open(f"index/{index_number}_merged_positions.json", "rb") as pos_f:
+        positions = orjson.loads(pos_f.read())
+        token_pos = positions[query]
+
+    with open(f"index/{index_number}_merged.json", "rb") as index_f:
+        index_f.seek(token_pos)
+
+        line = index_f.readline()
+        posting = orjson.loads(line)
+        # print(posting)
+
+    indexer.close_partial_index_files()
+
+    new = time.time()
+    time_taken = new - past
+    
+    print("\n", time_taken, "seconds taken to retrieve one word's posting")
 
     # # Define a list of test queries
     # test_queries = [
