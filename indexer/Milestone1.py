@@ -3,7 +3,10 @@ from bs4 import BeautifulSoup
 import numpy as np
 import math
 import os
+import pathlib
+import shutil
 import json
+import orjson
 import re
 
 """
@@ -20,6 +23,24 @@ Making actual index:
             - the third elem is the tf-idf score
                 - when all files have been parsed, go through each term and calculate the idf score
 
+"Before merging/index creation"
+Partial Index 0: "
+    {docID: [[3, 4, 8, ... , position],number of docs token appears in,tf_idf_score],docID2: [[other positions],number of docs token appears in,tf_idf_score]}
+    {docID: [[3, 4, 8, ... , position],number of docs token appears in,tf_idf_score],docID2: [[other positions],number of docs token appears in,tf_idf_score]}
+    "
+- each line corresponds to a token's posting
+- each posting is prettified at the bottom
+
+Partial Index 0 positions: {
+    "token": 0,
+    "token2": 153,
+    etc.
+}
+
+- after getting a token's position and seeking to it, read the whole line
+- json.loads the line and do the normal things with it, hopefully making the thing faster
+
+
     {
         "token": {
             docID: [
@@ -34,6 +55,9 @@ Making actual index:
             ]
         }
     }
+
+"Merging"
+
 """
 # TODO: text in bold, in headings, and in titles should be treated as more important
 
@@ -65,7 +89,7 @@ class Indexer:
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
-            posting_list = token_doc_dict.setdefault(self.docID_count, list())
+            posting_list = token_doc_dict.setdefault(str(self.docID_count), list())
             for elem in posting:
                 posting_list.append(elem)
 
@@ -90,11 +114,6 @@ class Indexer:
             file_content = json.load(fr)  # load json file
             url = file_content["url"]  # extract url
             content = file_content["content"]  # extract content
-
-            # to find a specific url
-            if url.strip() == "https://www.informatics.uci.edu/xmlrpc.php?rsd":
-                print(file_path)
-                print()
 
             text = BeautifulSoup(
                 content, features="lxml"
@@ -121,6 +140,30 @@ class Indexer:
 
         return url, one_file_word_freq
 
+    def _write_partial_index_to_file(self, posting_dict, index_num):
+        positions = {}
+        with open(f"../index/{index_num}.json", "wb") as index_f:
+            for token, posting in posting_dict.items():
+                pos = index_f.tell()
+                positions[token] = pos
+
+                to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
+                index_f.write(to_write)
+
+        with open(f"../index/{index_num}_positions.json", "wb") as positions_f:
+            to_write = orjson.dumps(positions)
+            print(len(positions))
+            positions_f.write(to_write)
+
+        # validating output
+        # with open(f"../{index_num}.json", "rb") as index_f:
+        #     for line in index_f:
+        #         print(line)
+
+        # with open(f"../{index_num}_positions.json", "rb") as positions_f:
+        #     read_in = orjson.loads(positions_f.read())
+        #     print(read_in)
+
     def _write_dict_to_file(self, data_dict, file_name):
         """Writes a dict to a file as json"""
         json_data = json.dumps(data_dict, indent=None, separators=(",", ":"))
@@ -129,6 +172,12 @@ class Indexer:
 
     def create_index(self) -> None:
         os.chdir(self._dir_name)
+
+        # if index directory exists, delete it and all its contents, then create the empty directory again
+        index_dir = pathlib.Path("../index/")
+        if index_dir.exists():
+            shutil.rmtree(index_dir)
+        index_dir.mkdir()
 
         for _dir in os.listdir():
             for file in os.listdir(_dir):
@@ -146,17 +195,22 @@ class Indexer:
 
                 # dump current inv_index into json file and reset inv_index
                 if self.docID_count % 30 == 0:
-                    self._write_dict_to_file(self.inv_index, str(self.index_count) + ".json")
+                    self._write_partial_index_to_file(self.inv_index, self.index_count)
                     self.inv_index = {}
                     self.index_count += 1
+                    # os.chdir(self.orig_dir)
+                    # return
 
         # self._update_tf_idf_scores()
 
-        # one final partial index for anything left over
-        self._write_dict_to_file(self.inv_index, str(self.index_count) + ".json")
+        # one final partial index write for anything left over
+        self._write_partial_index_to_file(self.inv_index, self.index_count)
         self._write_dict_to_file(self.docID_map, self._docID_file_name)
 
         os.chdir(self.orig_dir)
+
+    def merge_indexes(self) -> None:
+        curr_index = 0
 
     def get_document_count(self) -> int:
         """Counts through all files in each subdirectory"""
@@ -203,13 +257,24 @@ if __name__ == "__main__":
     indexer = Indexer(
         directory, directory + "_inv_index.json", directory + "_doc_ID_map.json"
     )
+
     import time
 
-    past = time.time()
-
+    
     indexer.create_index()
-    # url, dic = indexer._get_one_file_token_freq("44a45c3cfd95b0299d3ac374bd3ec48a08d5402cdfda3d87cfb61ba55c37d74c.json")
-    # print(dic)
+    # indexer.merge_indexes()
+    past = time.time()
+    index_number = 1
+    with open(f"index/{index_number}_positions.json", "rb") as pos_f:
+        positions = orjson.loads(pos_f.read())
+        token_pos = positions["organs"]
+
+    with open(f"index/{index_number}.json", "rb") as index_f:
+        index_f.seek(token_pos)
+
+        line = index_f.readline()
+        posting = orjson.loads(line)
+        print(posting)
 
     new = time.time()
     time_taken = new - past
@@ -279,8 +344,8 @@ Merging:
     - ex. partial indexes 5, 4, 3, 2, 1
         if we are looking at 4 and t1 is in 4, we only need to look at 3, 2, 1
 
-- _update_tf_idf_scores() will need to be run on each file after creating the inv index initially
-        
+- _update_tf_idf_scores() will need to be run on each file after creating all partial inv indexes initially
+
 - somehow have indexes for the indexes
-    - like knowing that 1.json has terms from a-c, although everything is alphanumeric so idk
+
 """
