@@ -8,4 +8,4 @@ lxml
 bs4
 python-dotenv
 nltk
-ijson
+orjson

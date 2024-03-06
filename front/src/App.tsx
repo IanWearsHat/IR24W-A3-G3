@@ -10,6 +10,8 @@ function App() {
 
   return (
     <>
+      {/* no need to consider the rendering on the part of the user if you create a
+      web GUI - from last slide of Lecture 14 */}
       <SearchBar onQueryProcessed={setResults} />
       <Results results={results} />
       <Summary />
