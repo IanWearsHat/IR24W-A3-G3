@@ -66,6 +66,18 @@ Partial Index 0 positions: {
 # SEARCH ALSO CANNOT LOAD ALL INDEX INTO MAIN MEMORY
 
 
+def alnum_iter(input_string):
+    current_sequence = ""
+    for char in input_string:
+        if char.isalnum():
+            current_sequence += char
+        elif current_sequence:
+            yield current_sequence
+            current_sequence = ""
+    if current_sequence:
+        yield current_sequence
+
+
 class Indexer:
     orig_dir = os.getcwd()
 
@@ -120,10 +132,10 @@ class Indexer:
                 content, features="lxml"
             ).get_text()  # parse html contents
 
-            text = re.sub(r"[\W_]+", " ", text)
-            split_text = text.split()
-            for i in range(len(split_text)):  # iterate the word in the text
-                word = split_text[i].lower()
+            last_i = 0
+            iterator = alnum_iter(text)
+            for i, word in enumerate(iterator):  # iterate the word in the text
+                word = word.lower()
 
                 one_file_word_freq.setdefault(word, list())
 
@@ -132,12 +144,16 @@ class Indexer:
                 if len(posting) == 0:
                     posting.append(list())
                     posting.append(0)
-                    # initially make posting[2] the number of words in the text
-                    # This will be changed when update_tf_idf_scores is called
-                    posting.append(len(split_text))
 
                 posting[0].append(i)
                 posting[1] += 1
+
+                last_i += 1
+
+            # initially make posting[2] the number of words in the text
+            # This will be changed when update_tf_idf_scores is called
+            for posting in one_file_word_freq.values():
+                posting.append(last_i)
 
         return url, one_file_word_freq
 
@@ -189,7 +205,7 @@ class Indexer:
 
                 url, one_file_map = self._get_one_file_token_freq(file_path)
 
-                if self.docID_count % 1000 == 0:
+                if self.docID_count % 200 == 0:
                     print(self.docID_count, url)
 
                 self._update_inv_index(one_file_map)
@@ -198,7 +214,7 @@ class Indexer:
                 self.docID_count += 1
 
                 # dump current inv_index into json file and reset inv_index
-                if self.docID_count % 256 == 0:
+                if self.docID_count % 30 == 0:
                     self._write_partial_index_to_file(self.inv_index, self.index_count)
                     self.inv_index = {}
                     self.index_count += 1
@@ -215,6 +231,8 @@ class Indexer:
 
     def merge_indexes(self) -> None:
         os.chdir("index/")
+        seen = set()
+
         final_index_num = 0
         final_token_map = {}
         final_index = {}
@@ -227,6 +245,11 @@ class Indexer:
 
             positions = orjson.loads(positions_f.read())
             for token in positions.keys():
+                # if token has already been merged, skip the token
+                if token in seen:
+                    continue
+                seen.add(token)
+
                 token_pos = positions[token]
 
                 index_f.seek(token_pos)
@@ -253,7 +276,7 @@ class Indexer:
 
                 final_token_map[token] = final_index_num
                 final_index.update({token: token_posting})
-                # break
+
                 token_count += 1
                 if token_count % 512 == 0:
                     w_positions = {}
@@ -262,10 +285,14 @@ class Indexer:
                             pos = final_index_f.tell()
                             w_positions[token] = pos
 
-                            to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
+                            to_write = orjson.dumps(
+                                posting, option=orjson.OPT_APPEND_NEWLINE
+                            )
                             final_index_f.write(to_write)
 
-                    with open(f"{final_index_num}_merged_positions.json", "wb+") as final_positions_f:
+                    with open(
+                        f"{final_index_num}_merged_positions.json", "wb+"
+                    ) as final_positions_f:
                         to_write = orjson.dumps(w_positions)
                         final_positions_f.write(to_write)
 
@@ -282,10 +309,12 @@ class Indexer:
                 to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
                 final_index_f.write(to_write)
 
-        with open(f"{final_index_num}_merged_positions.json", "wb+") as final_positions_f:
+        with open(
+            f"{final_index_num}_merged_positions.json", "wb+"
+        ) as final_positions_f:
             to_write = orjson.dumps(positions)
             final_positions_f.write(to_write)
-        
+
         with open("final_token_map.json", "wb") as f:
             to_write = orjson.dumps(final_token_map)
             f.write(to_write)
@@ -344,43 +373,51 @@ if __name__ == "__main__":
     )
 
     import time
-    past = time.time()
 
-    indexer.create_index()
-    indexer.merge_indexes()
+    def time_taken(callable):
+        past = time.time()
 
-    new = time.time()
-    time_taken = new - past
+        callable()
+
+        new = time.time()
+        time_taken = new - past
+
+        return time_taken
+
+    index_time = time_taken(indexer.create_index)
+    merge_time = time_taken(indexer.merge_indexes)
+
     doc_count = indexer.get_document_count()
-    print(time_taken, "seconds taken")
-    print(time_taken / doc_count, "seconds per doc on average")
+    print()
+    print(index_time, "s to index")
+    print(merge_time, "s to merge")
+    print()
+    print(index_time + merge_time, "s total")
+    print((index_time + merge_time) / doc_count, "seconds per doc on average")
     print(doc_count, "documents parsed")
 
+    def retrieve():
+        query = "computable"
+        with open("index/final_token_map.json", "rb") as token_f:
+            tokens = orjson.loads(token_f.read())
+            index_number = tokens[query]
 
-    past = time.time()
+        with open(f"index/{index_number}_merged_positions.json", "rb") as pos_f:
+            positions = orjson.loads(pos_f.read())
+            token_pos = positions[query]
 
-    query = "wuschel"
-    with open("index/final_token_map.json", "rb") as token_f:
-        tokens = orjson.loads(token_f.read())
-        index_number = tokens[query]
+        with open(f"index/{index_number}_merged.json", "rb") as index_f:
+            index_f.seek(token_pos)
 
-    with open(f"index/{index_number}_merged_positions.json", "rb") as pos_f:
-        positions = orjson.loads(pos_f.read())
-        token_pos = positions[query]
+            line = index_f.readline()
+            posting = orjson.loads(line)
+            # print(posting)
 
-    with open(f"index/{index_number}_merged.json", "rb") as index_f:
-        index_f.seek(token_pos)
+        indexer.close_partial_index_files()
 
-        line = index_f.readline()
-        posting = orjson.loads(line)
-        # print(posting)
-
-    indexer.close_partial_index_files()
-
-    new = time.time()
-    time_taken = new - past
-    
-    print("\n", time_taken, "seconds taken to retrieve one word's posting")
+    retrieve_time = time_taken(retrieve)
+    print()
+    print(retrieve_time, "s to retrieve one word's posting")
 
     # # Define a list of test queries
     # test_queries = [
