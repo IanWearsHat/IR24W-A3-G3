@@ -129,7 +129,8 @@ class Indexer:
                 return None, None
 
             content = file_content["content"]  # extract content
-            if not content.startswith("<!DOCTYPE html"):
+            leading = content[:20].lower()
+            if "html" not in leading:
                 return None, None
 
             soup = BeautifulSoup(content, features="lxml")
