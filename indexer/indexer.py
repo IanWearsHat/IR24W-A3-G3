@@ -20,13 +20,12 @@ Making actual index:
             - the list first has another list of the position of that term in the document
                 - implicitly has the number of times the term occurs in the document (take len of lists of positions)
             - the second elem in the list is the number of docs token appears in
-            - the third elem is the tf-idf score
-                - when all files have been parsed, go through each term and calculate the idf score
+            - the third elem is the number of words in doc
 
 "Before merging/index creation"
 Partial Index 0: "
-    {docID: [[3, 4, 8, ... , position],number of docs token appears in,tf_idf_score],docID2: [[other positions],number of docs token appears in,tf_idf_score]}
-    {docID: [[3, 4, 8, ... , position],number of docs token appears in,tf_idf_score],docID2: [[other positions],number of docs token appears in,tf_idf_score]}
+    {docID: [[3, 4, 8, ... , position],number of docs token appears in,number of words in doc],docID2: [[other positions],number of docs token appears in,number of words in doc2]}
+    {docID: [[3, 4, 8, ... , position],number of docs token appears in,number of words in doc],docID2: [[other positions],number of docs token appears in,number of words in doc2]}
     "
 - each line corresponds to a token's posting
 - posting format is shown at bottom
@@ -40,20 +39,19 @@ Partial Index 0 positions: {
 - after getting a token's position and seeking to it, read the whole line
 - json.loads the line and do the normal things with it
 
-    {
-        "token": {
-            docID: [
-                [3, 4, 8, ... , position],
-                number of docs token appears in,
-                tf_idf_score -----------------# calculated in update_tf_idf_scores
-            ],
-            docID2: [
-                [other positions],
-                number of docs token appears in,
-                tf_idf_score
-            ]
-        }
-    }
+{
+    docID: [
+        [3, 4, 8, ... , position of token in doc],
+        number of times in doc token appears,
+        number of words in doc2
+    ],
+    docID2: [
+        [other positions],
+        number of times in doc token appears,
+        number of words in doc2
+    ]
+}
+
 
 "Merging"
 - 
@@ -129,13 +127,18 @@ class Indexer:
                 return None, None
 
             content = file_content["content"]  # extract content
-
             if not content.startswith("<!DOCTYPE html"):
                 return None, None
 
-            text = BeautifulSoup(
-                content, features="lxml"
-            ).get_text()  # parse html contents
+            soup = BeautifulSoup(content, features="lxml")
+
+            # gets set of all words found in important tags
+            important_words = set()
+            important_tags = ["h1", "h2", "h3", "b", "strong", "title"]
+            for tag in soup.find_all(important_tags):
+                important_words.update({word.lower() for word in alnum_iter(tag.text.strip())})
+
+            text = soup.get_text()  # get all text from webpage
 
             num_words = 0
             iterator = alnum_iter(text)
@@ -149,6 +152,11 @@ class Indexer:
                 if len(posting) == 0:
                     posting.append(list())
                     posting.append(0)
+                    posting.append(0)
+
+                    # word is marked important with a 1 as the 3rd element
+                    if word in important_words:
+                        posting.append(1)
 
                 posting[0].append(i)
                 posting[1] += 1
@@ -158,7 +166,7 @@ class Indexer:
             # initially make posting[2] the number of words in the text
             # This will be changed when update_tf_idf_scores is called
             for posting in one_file_word_freq.values():
-                posting.append(num_words)
+                posting[2] = num_words
 
         return url, one_file_word_freq
 
@@ -354,9 +362,10 @@ def cosine_similarity(vec1, vec2):
     return similarity
 
 
+# TODO: adding extra credit to postings
 def main():
     """Creates the whole index"""
-    indexer = Indexer("DEV")
+    indexer = Indexer("ANALYST")
 
     indexer.create_index()
     indexer.merge_indexes()
@@ -368,8 +377,11 @@ def main():
 
     print("-" * 100)
     print(f"Indexed {num_parsed_docs} docs out of total {total_num_docs}.")
-    print("The number of indexed documents is smaller because they've been filtered from the total corpus.")
+    print(
+        "The number of indexed documents is smaller because they've been filtered from the total corpus."
+    )
     print("-" * 100)
+
 
 if __name__ == "__main__":
     main()

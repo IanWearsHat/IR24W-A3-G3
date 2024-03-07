@@ -27,7 +27,7 @@ class Index:
             index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
             positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
         
-        with open("../../index/token_to_index.json", "rb") as f:
+        with open("../../index/token_to_index_num.json", "rb") as f:
             self.master_map = orjson.loads(f.read())
 
     def close_index_files(self) -> None:
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     #         print(url)
     #     input_str = input("Input a query: ")
 
-    query = "bonnie tanks subcommittee moms"
+    query = "Iftekhar Ahmed"
 
     index = Index()
     doc_ids = index.get_query_intersection(query)
