@@ -85,7 +85,7 @@ class Indexer:
 
     def __init__(self, dir_name):
         self._dir_name = dir_name
-
+        self._docID_file_name = "docID_to_URL.json"
 
     def _update_docID_map(self, url):
         self.docID_map[str(self.docID_count)] = url
@@ -122,6 +122,9 @@ class Indexer:
                 or url.endswith(".xml")
                 or url.endswith(".txt")
                 or url.endswith(".pdf")
+                or url.endswith(".svg")
+                or url.endswith(".png")
+                or url.endswith(".jpg")
             ):
                 return None, None
 
@@ -192,7 +195,7 @@ class Indexer:
             for file in pathlib.Path(_dir).iterdir():
                 file_path = pathlib.Path(file)
 
-                if pathlib.Path(file_path).stat().st_size > 20000000:
+                if pathlib.Path(file_path).stat().st_size > 5000000:
                     continue
 
                 url, one_file_map = self._get_one_file_token_freq(file_path)
@@ -201,7 +204,7 @@ class Indexer:
                     continue
 
                 if self.docID_count % 200 == 0:
-                    print(self.docID_count, url)
+                    print(f"Parsing doc # {self.docID_count}: {url}")
 
                 self._update_inv_index(one_file_map)
                 self._update_docID_map(url)
@@ -209,7 +212,7 @@ class Indexer:
                 self.docID_count += 1
 
                 # dump current inv_index into json file and reset inv_index
-                if self.docID_count % 30 == 0:
+                if self.docID_count % 64 == 0:
                     self._write_partial_index_to_file(self.inv_index, self.index_count)
                     self.inv_index = {}
                     self.index_count += 1
@@ -304,7 +307,7 @@ class Indexer:
             to_write = orjson.dumps(positions)
             final_positions_f.write(to_write)
 
-        with open("./index/final_token_map.json", "wb") as f:
+        with open("./index/token_to_index_num.json", "wb") as f:
             to_write = orjson.dumps(final_token_map)
             f.write(to_write)
 
@@ -351,62 +354,22 @@ def cosine_similarity(vec1, vec2):
     return similarity
 
 
-if __name__ == "__main__":
-    # TODO: make this main function actually create the index
-    is_test = True
+def main():
+    """Creates the whole index"""
+    indexer = Indexer("DEV")
 
-    if is_test:
-        directory = "ANALYST"
-    else:
-        directory = "DEV"
-
-    indexer = Indexer(directory)
-
-    import time
-
-    def time_taken(callable):
-        past = time.time()
-
-        callable()
-
-        new = time.time()
-        time_taken = new - past
-
-        return time_taken
-
-    index_time = time_taken(indexer.create_index)
-    merge_time = time_taken(indexer.merge_indexes)
-
-    doc_count = indexer.get_document_count()
-    print()
-    print(index_time, "s to index")
-    print(merge_time, "s to merge")
-    print()
-    print(index_time + merge_time, "s total")
-    print((index_time + merge_time) / doc_count, "seconds per doc on average")
-    print(indexer.get_documents_parsed(), "documents parsed")
-    print(doc_count, "documents total")
-
-    def retrieve():
-        query = "transduction"
-        with open("./index/final_token_map.json", "rb") as token_f:
-            tokens = orjson.loads(token_f.read())
-            index_number = tokens[query]
-
-        with open(f"./index/{index_number}_merged_positions.json", "rb") as pos_f:
-            positions = orjson.loads(pos_f.read())
-            token_pos = positions[query]
-
-        with open(f"./index/{index_number}_merged.json", "rb") as index_f:
-            index_f.seek(token_pos)
-
-            line = index_f.readline()
-            posting = orjson.loads(line)
-            # print(posting)
-
+    indexer.create_index()
+    indexer.merge_indexes()
     indexer.close_partial_index_files()
     indexer.delete_unsorted_partial_indexes()
 
-    retrieve_time = time_taken(retrieve)
-    print()
-    print(retrieve_time, "s to retrieve one word's posting")
+    total_num_docs = indexer.get_document_count()
+    num_parsed_docs = indexer.get_documents_parsed()
+
+    print("-" * 100)
+    print(f"Indexed {num_parsed_docs} docs out of total {total_num_docs}.")
+    print("The number of indexed documents is smaller because they've been filtered from the total corpus.")
+    print("-" * 100)
+
+if __name__ == "__main__":
+    main()

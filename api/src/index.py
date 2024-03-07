@@ -27,7 +27,7 @@ class Index:
             index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
             positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
         
-        with open("../../index/final_token_map.json", "rb") as f:
+        with open("../../index/token_to_index.json", "rb") as f:
             self.master_map = orjson.loads(f.read())
 
     def close_index_files(self) -> None:
