@@ -74,7 +74,6 @@ def alnum_iter(input_string):
 
 
 class Indexer:
-    stemmer = PorterStemmer()
     inv_index = dict()
     docID_map = dict()
 
@@ -84,10 +83,9 @@ class Indexer:
     positions_dicts = []
     posting_files = []
 
-    def __init__(self, dir_name, index_file_name, docID_file_name):
+    def __init__(self, dir_name):
         self._dir_name = dir_name
-        self._index_file_name = index_file_name
-        self._docID_file_name = docID_file_name
+
 
     def _update_docID_map(self, url):
         self.docID_map[str(self.docID_count)] = url
@@ -354,6 +352,7 @@ def cosine_similarity(vec1, vec2):
 
 
 if __name__ == "__main__":
+    # TODO: make this main function actually create the index
     is_test = True
 
     if is_test:
@@ -361,9 +360,8 @@ if __name__ == "__main__":
     else:
         directory = "DEV"
 
-    indexer = Indexer(
-        directory, directory + "_inv_index.json", directory + "_doc_ID_map.json"
-    )
+    indexer = Indexer(directory)
+
     import time
 
     def time_taken(callable):
@@ -412,39 +410,3 @@ if __name__ == "__main__":
     retrieve_time = time_taken(retrieve)
     print()
     print(retrieve_time, "s to retrieve one word's posting")
-    """
-    Current time:
-
-    1.2464182376861572 s to index
-    7.046298503875732 s to merge
-
-    8.29271674156189 s total
-    0.08549192517074113 seconds per doc on average
-    97 documents parsed
-
-    0.03386831283569336 s to retrieve one word's posting
-
-    ----
-
-    101.7853627204895 s to index
-    64.61580681800842 s to merge
-
-    166.40116953849792 s total
-    0.11444372045288716 seconds per doc on average
-    1454 documents parsed
-    """
-    # # Define a list of test queries
-    # test_queries = [
-    #     "cristina lopes",
-    #     "machine learning",
-    #     "ACM",
-    #     "master of software engineering",
-    # ]
-
-    # # Process each query and print the results
-    # for query in test_queries:
-    #     print(f"Processing query: {query}")
-    #     result_docs = indexer.process_query(query)
-    #     print(f"Documents intersection found: {result_docs}\n")
-
-    # TODO: switch to pathlib instead
