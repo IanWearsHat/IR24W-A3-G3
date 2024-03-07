@@ -72,6 +72,8 @@ def alnum_iter(input_string):
 
 
 class Indexer:
+    stemmer = PorterStemmer()
+
     inv_index = dict()
     docID_map = dict()
 
@@ -136,14 +138,14 @@ class Indexer:
             important_words = set()
             important_tags = ["h1", "h2", "h3", "b", "strong", "title"]
             for tag in soup.find_all(important_tags):
-                important_words.update({word.lower() for word in alnum_iter(tag.text.strip())})
+                important_words.update({self.stemmer.stem(word) for word in alnum_iter(tag.text.strip())})
 
             text = soup.get_text()  # get all text from webpage
 
             num_words = 0
             iterator = alnum_iter(text)
             for i, word in enumerate(iterator):  # iterate the word in the text
-                word = word.lower()
+                word = self.stemmer.stem(word)
 
                 one_file_word_freq.setdefault(word, list())
 
