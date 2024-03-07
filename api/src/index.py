@@ -68,32 +68,6 @@ if __name__ == "__main__":
     #     for url in urls[:5]:
     #         print(url)
     #     input_str = input("Input a query: ")
-    import re
-    import timeit
-
-    def alphanumeric_iterator(input_string):
-        current_sequence = ''
-        for char in input_string:
-            if char.isalnum():
-                current_sequence += char
-            elif current_sequence:
-                yield current_sequence
-                current_sequence = ''
-        if current_sequence:
-            yield current_sequence
-
-    # Define the input string
-    input_string = "abc 902-took]bruh b" * 2  # Repeat for larger input
-    iterator = alphanumeric_iterator(input_string)
-
-    # Define the regular expression pattern
-    pattern = re.compile(r'\w+')
-
-    # Benchmark using regular expressions
-    regex_time = timeit.timeit(lambda: list(pattern.finditer(input_string)), number=100)
-
-    # Benchmark without regular expressions
-    no_regex_time = timeit.timeit(lambda: [s for s in iterator], number=100)
-
-    print("Time taken with regular expressions:", regex_time)
-    print("Time taken without regular expressions:", no_regex_time)
+    d = {"34":0,"8":128,"55":179,"68":330,"35":541,"96":649,"59":834,"74":1019,"36":1174,"54":1261,"51":1448,"04":1579,"37":1652,"12":1752,"64":1804,"38":2039,"28":2200,"62":2277,"06":2514,"86":2609,"45":2765,"82":2899,"50":3078,"46":3193,"40":3378,"02":3498,"56":3576,"84":3775,"6":3912,"66":3975,"71":4178,"41":4300,"18":4394,"48":4447,"72":4645,"42":4844,"53":5031,"94":5216,"92":5373,"43":5537,"5":5620,"44":5715,"08":5901,"57":5983,"69":6105,"80":6227,"99":6399,"76":6511,"24":6716,"14":6804,"49":6888,"3":7025,"65":7133,"73":7265,"4":7422,"97":7572,"98":7651,"77":7823,"47":7969,"88":8112,"104":8280,"79":8405,"89":8531,"32":8673,"109":8811,"63":8884,"67":8994,"102":9167,"106":9268,"100":9348,"33":9454,"85":9545,"87":9707,"52":9834,"2":10039,"16":10152,"111":10228,"78":10288,"22":10487,"7":10529,"75":10605,"1":10796,"81":10872,"105":10971,"26":11052,"58":11172,"114":11361,"9":11412,"29":11458,"39":11557,"83":11690,"95":11851,"93":11964,"31":12073,"60":12166,"70":12298,"61":12476,"107":12598,"112":12680,"91":12727,"103":12850,"115":12921,"30":12969,"113":13016,"27":13073,"101":13127,"110":13211,"90":13253,"plenum":13359,"dynamical":13387,"grammar":13433,"simulator":13454,"is":13472,"a":13530,"simulation":13597,"software":13631,"written":13685,"in":13704,"mathematica":13768,"for":13787,"models":13877,"grammars":13938,"are":13960,"an":13997,"elegant":14035,"language":14054,"representing":14073,"complex":14109,"processes":14131,"that":14150,"include":14172,"stochastic":14194,"events":14216,"and":14238,"continuous":14333,"dynamics":14352,"applications":14389,"were":14426,"modeled":14445,"tissue":14464,"development":14483,"with":14520,"cellular":14569,"diffusion":14588,"of":14607}
+    print(list(d.keys())[-1])
+    print(len(d))

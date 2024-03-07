@@ -87,7 +87,9 @@ class Indexer:
 
     docID_count = 0
     index_count = 0
-    open_files = []
+
+    positions_dicts = []
+    posting_files = []
 
     def __init__(self, dir_name, index_file_name, docID_file_name):
         self._dir_name = dir_name
@@ -169,20 +171,8 @@ class Indexer:
             to_write = orjson.dumps(posting, option=orjson.OPT_APPEND_NEWLINE)
             index_f.write(to_write)
 
-        positions_f = open(f"../index/{index_num}_positions.json", "wb+")
-        to_write = orjson.dumps(positions)
-        positions_f.write(to_write)
-
-        self.open_files.append((positions_f, index_f))
-
-        # validating output
-        # with open(f"../{index_num}.json", "rb") as index_f:
-        #     for line in index_f:
-        #         print(line)
-
-        # with open(f"../{index_num}_positions.json", "rb") as positions_f:
-        #     read_in = orjson.loads(positions_f.read())
-        #     print(read_in)
+        self.positions_dicts.append(positions)
+        self.posting_files.append(index_f)
 
     def _write_dict_to_file(self, data_dict, file_name):
         """Writes a dict to a file as json"""
@@ -238,12 +228,12 @@ class Indexer:
         final_index = {}
 
         token_count = 0
-        for curr_index in range(len(self.open_files)):
-            positions_f, index_f = self.open_files[curr_index]
-            positions_f.seek(0)
+        for curr_index in range(len(self.positions_dicts)):
+            positions = self.positions_dicts[curr_index]
+            index_f = self.posting_files[curr_index]
+
             index_f.seek(0)
 
-            positions = orjson.loads(positions_f.read())
             for token in positions.keys():
                 # if token has already been merged, skip the token
                 if token in seen:
@@ -257,15 +247,14 @@ class Indexer:
                 line = index_f.readline()
                 token_posting = orjson.loads(line)
 
-                for next_index_num in range(curr_index + 1, len(self.open_files)):
-                    next_pos_f, next_index_f = self.open_files[next_index_num]
-                    next_pos_f.seek(0)
+                for next_index_num in range(curr_index + 1, len(self.positions_dicts)):
+                    next_pos_dict = self.positions_dicts[next_index_num]
+                    next_index_f = self.posting_files[next_index_num]
+
                     next_index_f.seek(0)
 
-                    next_positions = orjson.loads(next_pos_f.read())
-
-                    if token in next_positions:
-                        next_token_pos = next_positions[token]
+                    if token in next_pos_dict:
+                        next_token_pos = next_pos_dict[token]
 
                         next_index_f.seek(next_token_pos)
 
@@ -322,9 +311,8 @@ class Indexer:
         os.chdir(self.orig_dir)
 
     def close_partial_index_files(self) -> None:
-        for file_tuple in self.open_files:
-            for file in file_tuple:
-                file.close()
+        for file in self.posting_files:
+            file.close()
 
     def get_document_count(self) -> int:
         """Counts through all files in each subdirectory"""
@@ -413,12 +401,32 @@ if __name__ == "__main__":
             posting = orjson.loads(line)
             # print(posting)
 
-        indexer.close_partial_index_files()
+    indexer.close_partial_index_files()
 
     retrieve_time = time_taken(retrieve)
     print()
     print(retrieve_time, "s to retrieve one word's posting")
+    """
+    Current time:
 
+    1.2464182376861572 s to index
+    7.046298503875732 s to merge
+
+    8.29271674156189 s total
+    0.08549192517074113 seconds per doc on average
+    97 documents parsed
+
+    0.03386831283569336 s to retrieve one word's posting
+
+    ----
+
+    101.7853627204895 s to index
+    64.61580681800842 s to merge
+
+    166.40116953849792 s total
+    0.11444372045288716 seconds per doc on average
+    1454 documents parsed
+    """
     # # Define a list of test queries
     # test_queries = [
     #     "cristina lopes",
@@ -433,7 +441,7 @@ if __name__ == "__main__":
     #     result_docs = indexer.process_query(query)
     #     print(f"Documents intersection found: {result_docs}\n")
 
-    # TODO: does this need to be filtered out? http://computableplant.ics.uci.edu/models/Activator/WU-Activator-Update-2010/vertices.tsv
+    # TODO: Filter out xml and other non-html files http://computableplant.ics.uci.edu/models/Activator/WU-Activator-Update-2010/vertices.tsv
     # TODO: switch to pathlib instead
 """
 Creating partial indexes:
