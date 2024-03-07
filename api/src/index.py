@@ -1,41 +1,55 @@
+import pathlib
 from nltk.stem import PorterStemmer
-import ijson
-import json
-
+import orjson
 
 class Index:
-    def __init__(self, _index_path, _doc_id_map_path):
-        self._index_path = _index_path
-        self._doc_id_map_path = _doc_id_map_path
+    posting_files = []
+    positions_files = []
 
-    def _get_term_doc_ids(self, term):
-        stemmer = PorterStemmer()
-        term = term.lower()
-        term = stemmer.stem(term)
-        doc_ids = set()
+    master_map = None
 
-        with open(self._index_path, "rb") as f:
-            parser = ijson.parse(f)
-            # print(list(parser))
+    def __init__(self):
+        self._open_index_files()
+    
+    def _open_index_files(self):
+        index_num = 0
+        index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
+        positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
+        while index_path.exists():
+            postings_f = open(index_path, "rb")
+            self.posting_files.append(postings_f)
 
-            started = False
-            for prefix, event, value in parser:
-                if (
-                    prefix.startswith(term + ".") or prefix == term
-                ) and event == "map_key":
-                    print(prefix, event, value)
-                    doc_ids.add(value)
-                # if prefix.startswith(term):
-                #     print(prefix, event, value)
+            with open(positions_path, "rb") as f:
+                positions_dict = orjson.loads(f.read())
+            self.positions_files.append(positions_dict)
 
-                if prefix == term:
-                    if started:
-                        if event == "end_map":
-                            break
-                    else:
-                        started = True
+            index_num += 1
+            index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
+            positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
+        
+        with open("../../index/final_token_map.json", "rb") as f:
+            self.master_map = orjson.loads(f.read())
 
-        return doc_ids
+    def close_index_files(self) -> None:
+        for file in self.posting_files:
+            file.close()
+    
+    def _get_term_doc_ids(self, query):
+        if query not in self.master_map:
+            return set()
+
+        index_num = self.master_map[query]
+
+        positions = self.positions_files[index_num]
+        position_in_file = positions[query]
+
+        index_file = self.posting_files[index_num]
+        index_file.seek(position_in_file)
+
+        line = index_file.readline()
+        posting = orjson.loads(line)
+
+        return set(posting.keys())
 
     def get_query_intersection(self, query_string):
         query_terms = query_string.lower().split()
@@ -50,14 +64,6 @@ class Index:
 
         return common_doc_ids
 
-    def get_top_urls(self, doc_ids: set):
-        urls = []
-        with open(self._doc_id_map_path, "r") as f:
-            d = json.load(f)
-            for id in doc_ids:
-                urls.append(d[id])
-        return urls[:5]
-
 
 if __name__ == "__main__":
     # index = Index("DEV_inv_index.json", "DEV_doc_ID_map.json")
@@ -68,10 +74,11 @@ if __name__ == "__main__":
     #     for url in urls[:5]:
     #         print(url)
     #     input_str = input("Input a query: ")
-    
-    for letter in ["a", "b", "c", "d"]:
-        for i in range(10):
-            if i > 3:
-                continue
-            print(i)
-        print(letter)
+
+    query = "bonnie tanks subcommittee moms"
+
+    index = Index()
+    doc_ids = index.get_query_intersection(query)
+    index.close_index_files()
+
+    print(doc_ids)
