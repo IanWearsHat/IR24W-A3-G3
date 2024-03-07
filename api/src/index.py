@@ -29,10 +29,10 @@ class Index:
             index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
             positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
         
-        with open("../../index/token_to_index_num.json", "rb") as f:
+        with open(pathlib.Path("../../index/token_to_index_num.json"), "rb") as f:
             self.master_token_map = orjson.loads(f.read())
         
-        with open("../../index/docID_to_URL.json", "rb") as f:
+        with open(pathlib.Path("../../index/docID_to_file.json"), "rb") as f:
             self.docID_to_file_map = orjson.loads(f.read())
 
     def close_index_files(self) -> None:
@@ -73,9 +73,16 @@ class Index:
 
     def get_urls(self, doc_ids):
         urls = []
+        i = 0
         for doc_id in doc_ids:
-            url = self.docID_to_file_map[doc_id]
-            urls.append(url)
+            if i == 10:
+                break
+            path = pathlib.Path(f"..\\..\\{self.docID_to_file_map[doc_id]}")
+            with open(path, "rb") as f:
+                content = orjson.loads(f.read())
+                urls.append(content["url"])
+            i += 1
+                # print(len(content["content"]))
         return urls
 
 
@@ -88,12 +95,19 @@ if __name__ == "__main__":
     #     for url in urls[:5]:
     #         print(url)
     #     input_str = input("Input a query: ")
+    import time
 
-    query = "machine learning"
-
+    query = "iftekhar ahmed"
     index = Index()
+
+    past = time.time()
+
     doc_ids = index.get_query_intersection(query)
     urls = index.get_urls(doc_ids)
+
+    now = time.time()
+    print(now - past, "seconds taken")
+
     index.close_index_files()
 
     print(urls)

@@ -16,9 +16,7 @@ export default function SearchBar({ onQueryProcessed }: SearchBarProps) {
       body: formData,
     })
       .then((resp) => resp.json())
-      .then((data) => console.log(data));
-
-    onQueryProcessed({ urls: ['1', '2'] });
+      .then((data) => onQueryProcessed(data));
   };
 
   return (

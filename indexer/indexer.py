@@ -85,10 +85,10 @@ class Indexer:
 
     def __init__(self, dir_name):
         self._dir_name = dir_name
-        self._docID_file_name = "docID_to_URL.json"
+        self._docID_file_name = "docID_to_file.json"
 
-    def _update_docID_map(self, url):
-        self.docID_map[str(self.docID_count)] = url
+    def _update_docID_map(self, url, file_path):
+        self.docID_map[str(self.docID_count)] = str(file_path)
 
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
@@ -218,7 +218,7 @@ class Indexer:
                     print(f"Parsing doc # {self.docID_count}: {url}")
 
                 self._update_inv_index(one_file_map)
-                self._update_docID_map(url)
+                self._update_docID_map(url, file_path)
 
                 self.docID_count += 1
 
@@ -368,7 +368,7 @@ def cosine_similarity(vec1, vec2):
 # TODO: adding extra credit to postings
 def main():
     """Creates the whole index"""
-    indexer = Indexer("ANALYST")
+    indexer = Indexer("DEV")
 
     indexer.create_index()
     indexer.merge_indexes()

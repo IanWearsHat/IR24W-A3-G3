@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Form
 from index import Index
-
-app = FastAPI()
+import time
 
 """
 structure for document return object:
@@ -22,22 +21,29 @@ structure for document return object:
         ]
     }
 """
-index = Index(
-    r"C:\Users\ianbb\Documents\Code\121\IR24W-A3-G3\api\src\DEV_doc_ID_map.json",
-    r"C:\Users\ianbb\Documents\Code\121\IR24W-A3-G3\api\src\DEV_inv_index.json",
-)
+app = FastAPI()
+index = None
 
 
-async def process():
-    print("started processing")
-    doc_ids = index.get_query_intersection("cristina lopes")
-    print("doc_ids", doc_ids)
-    urls = index.get_top_urls(doc_ids)
-    print("returning", urls)
+@app.on_event("startup")
+async def startup_event():
+    global index
+    index = Index()
 
-    return urls
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    index.close_index_files()
+
 
 @app.post("/process-query")
 async def process_query(query: str = Form()):
-    urls = await process()
+    print(query, "received")
+    past = time.time()
+
+    doc_ids = index.get_query_intersection(query)
+    urls = index.get_urls(doc_ids)
+
+    now = time.time()
+    print(f"{(now - past):.6f} seconds taken to process query")
     return {"urls": urls}
