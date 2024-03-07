@@ -1,13 +1,14 @@
 from nltk.stem import PorterStemmer
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import numpy as np
 import math
 import os
 import pathlib
 import shutil
-import json
 import orjson
-import re
+import warnings
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 """
 Making actual index:
@@ -96,7 +97,6 @@ class Indexer:
         self._index_file_name = index_file_name
         self._docID_file_name = docID_file_name
 
-        self._total_doc_count = self.get_document_count()
 
     def _update_docID_map(self, url):
         self.docID_map[str(self.docID_count)] = url
@@ -125,10 +125,21 @@ class Indexer:
         :return: the url, word frequency in the file
         """
         one_file_word_freq = {}
-        with open(file_path, "r") as fr:
-            file_content = json.load(fr)  # load json file
+        with open(file_path, "rb") as fr:
+            file_content = orjson.loads(fr.read())  # load json file
             url = file_content["url"]  # extract url
+            if (
+                url.endswith(".tsv")
+                or url.endswith(".xml")
+                or url.endswith(".txt")
+                or url.endswith(".pdf")
+            ):
+                return None, None
+
             content = file_content["content"]  # extract content
+
+            if not content.startswith("<!DOCTYPE html"):
+                return None, None
 
             text = BeautifulSoup(
                 content, features="lxml"
@@ -163,7 +174,7 @@ class Indexer:
         """Note: also opens files and does not close them as they will be used in merging.
         The files must be closed with the close_partial_index_files function"""
         positions = {}
-        index_f = open(f"../index/{index_num}.json", "wb+")
+        index_f = open(f"../../index/{index_num}.json", "wb+")
         for token, posting in posting_dict.items():
             pos = index_f.tell()
             positions[token] = pos
@@ -177,14 +188,14 @@ class Indexer:
     def _write_dict_to_file(self, data_dict, file_name):
         """Writes a dict to a file as json"""
         json_data = orjson.dumps(data_dict)
-        with open("../index/" + file_name, "wb") as json_writer:
+        with open("../../index/" + file_name, "wb") as json_writer:
             json_writer.write(json_data)
 
     def create_index(self) -> None:
         os.chdir(self._dir_name)
 
         # if index directory exists, delete it and all its contents, then create the empty directory again
-        index_dir = pathlib.Path("../index/")
+        index_dir = pathlib.Path("../../index/")
         if index_dir.exists():
             shutil.rmtree(index_dir)
         index_dir.mkdir()
@@ -193,7 +204,13 @@ class Indexer:
             for file in os.listdir(_dir):
                 file_path = os.path.join(_dir, file)
 
+                if pathlib.Path(file_path).stat().st_size > 20000000:
+                    continue
+
                 url, one_file_map = self._get_one_file_token_freq(file_path)
+
+                if url is None:
+                    continue
 
                 if self.docID_count % 200 == 0:
                     print(self.docID_count, url)
@@ -220,7 +237,7 @@ class Indexer:
         os.chdir(self.orig_dir)
 
     def merge_indexes(self) -> None:
-        os.chdir("index/")
+        os.chdir("../index/")
         seen = set()
 
         final_index_num = 0
@@ -267,7 +284,7 @@ class Indexer:
                 final_index.update({token: token_posting})
 
                 token_count += 1
-                if token_count % 512 == 0:
+                if token_count % 2048 == 0:
                     w_positions = {}
                     with open(f"{final_index_num}_merged.json", "wb") as final_index_f:
                         for token, posting in final_index.items():
@@ -326,6 +343,9 @@ class Indexer:
         os.chdir(self.orig_dir)
         return counter
 
+    def get_documents_parsed(self) -> int:
+        return self.docID_count
+
 
 def cosine_similarity(vec1, vec2):
     """
@@ -359,7 +379,6 @@ if __name__ == "__main__":
     indexer = Indexer(
         directory, directory + "_inv_index.json", directory + "_doc_ID_map.json"
     )
-
     import time
 
     def time_taken(callable):
@@ -382,19 +401,20 @@ if __name__ == "__main__":
     print()
     print(index_time + merge_time, "s total")
     print((index_time + merge_time) / doc_count, "seconds per doc on average")
-    print(doc_count, "documents parsed")
+    print(indexer.get_documents_parsed(), "documents parsed")
+    print(doc_count, "documents total")
 
     def retrieve():
-        query = "computable"
-        with open("index/final_token_map.json", "rb") as token_f:
+        query = "transduction"
+        with open("../index/final_token_map.json", "rb") as token_f:
             tokens = orjson.loads(token_f.read())
             index_number = tokens[query]
 
-        with open(f"index/{index_number}_merged_positions.json", "rb") as pos_f:
+        with open(f"../index/{index_number}_merged_positions.json", "rb") as pos_f:
             positions = orjson.loads(pos_f.read())
             token_pos = positions[query]
 
-        with open(f"index/{index_number}_merged.json", "rb") as index_f:
+        with open(f"../index/{index_number}_merged.json", "rb") as index_f:
             index_f.seek(token_pos)
 
             line = index_f.readline()
