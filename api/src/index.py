@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     index = Index()
 
-    query = "machine learning"
+    query = "acm ahmed"
 
 
     past = time.time()
@@ -135,14 +135,23 @@ if __name__ == "__main__":
 
     scores = calculate_scores(postings, intersecting, num_docs)
 
+    docs = []
+    i = 0
+    for docID in scores:
+        if i == 10:
+            break
+        docs.append(docID)
+        i += 1
+
     now = time.time()
     print(now - past, "seconds taken")
 
     index.close_index_files()
 
-    print(num_docs)
-    print(len(list(intersecting["machin"].keys())))
+    # print(num_docs)
+    # print(len(list(intersecting["acm"].keys())))
     print(scores)
+    print(docs)
 
     
 
