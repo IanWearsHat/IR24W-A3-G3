@@ -2,6 +2,8 @@ import pathlib
 from nltk.stem import PorterStemmer
 import orjson
 
+from ranker import calculate_scores
+
 
 class Index:
     stemmer = PorterStemmer()
@@ -84,19 +86,23 @@ class Index:
         
         return return_dict
 
-    def get_doc_posting_intersection_from_query(self, query_string: str):
+    def get_postings_from_query(self, query_string: str):
         query_terms = query_string.split()
-
         postings = {}
         for term in query_terms:
             term = self.stemmer.stem(term)
 
             posting = self._get_posting(term)
             postings[term] = posting
-
-        postings = self._get_intersecting_postings(postings)
-
+        
         return postings
+
+    def get_doc_amount(self, postings):
+        all_docs = set()
+        for posting in postings.values():
+            all_docs.update(set(posting.keys()))
+
+        return len(all_docs)
 
     def get_urls(self, doc_ids):
         urls = []
@@ -118,16 +124,26 @@ if __name__ == "__main__":
 
     index = Index()
 
-    query = "iftekhar ahmed"
-    
+    query = "machine learning"
+
 
     past = time.time()
 
-    postings = index.get_doc_posting_intersection_from_query(query)
+    postings = index.get_postings_from_query(query)
+    intersecting = index._get_intersecting_postings(postings)
+    num_docs = index.get_doc_amount(postings)
+
+    scores = calculate_scores(postings, intersecting, num_docs)
 
     now = time.time()
     print(now - past, "seconds taken")
 
     index.close_index_files()
 
-    print(len(list(postings["iftekhar"].keys())))
+    print(num_docs)
+    print(len(list(intersecting["machin"].keys())))
+    print(scores)
+
+    
+
+    # bad query probably uci bc it retrieves a lot more documents
