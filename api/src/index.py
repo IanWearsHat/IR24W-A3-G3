@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     index = Index()
 
-    query = "acm ahmed"
+    query = "artifici ahmed"
 
 
     past = time.time()
