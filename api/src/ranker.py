@@ -12,7 +12,9 @@
     in terms of scoring, if there is an is-important flag, then add like 10 to the overall score
 }
 """
+
 import math
+
 
 def initailize_scores(intersecting_postings):
     term = next(iter(intersecting_postings))
@@ -20,8 +22,9 @@ def initailize_scores(intersecting_postings):
     scores = {}
     for docID in intersecting_postings[term]:
         scores[docID] = 0
-    
+
     return scores
+
 
 def add_tf_idf_scores(scores, postings, intersecting_postings, num_union_docs):
     for docID in scores:
@@ -39,8 +42,12 @@ def add_tf_idf_scores(scores, postings, intersecting_postings, num_union_docs):
 
             scores[docID] += tf_idf
 
+
 def calculate_scores(postings, intersecting_postings, num_union_docs):
     scores = initailize_scores(intersecting_postings)
 
     add_tf_idf_scores(scores, postings, intersecting_postings, num_union_docs)
+
+    # adapted from https://stackoverflow.com/questions/613183/how-do-i-sort-a-dictionary-by-value
+    scores = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
     return scores
