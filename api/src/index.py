@@ -106,17 +106,10 @@ class Index:
 
     def get_urls(self, doc_ids):
         urls = []
-        i = 0
         for doc_id in doc_ids:
-            if i == 10:
-                break
-            path = pathlib.Path(f"..\\..\\{self.docID_to_file_map[doc_id]}")
-            with open(path, "rb") as f:
-                content = orjson.loads(f.read())
-                urls.append(content["url"])
-            i += 1
-            # print(len(content["content"]))
+            urls.append(self.docID_to_file_map[doc_id][0])
         return urls
+        # if using the filepath, add "indexer\\DEV\\" to the path
 
 
 if __name__ == "__main__":
@@ -124,7 +117,7 @@ if __name__ == "__main__":
 
     index = Index()
 
-    query = "artifici ahmed"
+    query = "html"
 
 
     past = time.time()
@@ -133,15 +126,9 @@ if __name__ == "__main__":
     intersecting = index._get_intersecting_postings(postings)
     num_docs = index.get_doc_amount(postings)
 
-    scores = calculate_scores(postings, intersecting, num_docs)
+    scores = calculate_scores(query, postings, intersecting, num_docs)
 
-    docs = []
-    i = 0
-    for docID in scores:
-        if i == 10:
-            break
-        docs.append(docID)
-        i += 1
+    docs = [k for k in list(scores.keys())[-10:]]
 
     now = time.time()
     print(now - past, "seconds taken")

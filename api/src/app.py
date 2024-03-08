@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Form
 from index import Index
+from ranker import calculate_scores
 import time
 
 """
@@ -21,6 +22,23 @@ structure for document return object:
         ]
     }
 """
+
+
+class Timer:
+    total_time = 0
+
+    def __init__(self, message):
+        self.message = message
+
+    def __enter__(self):
+        self.past = time.time()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        diff = time.time() - self.past
+        print(f"{diff:.6f} seconds to process {self.message}")
+        Timer.total_time += diff
+
+
 app = FastAPI()
 index = None
 
@@ -37,13 +55,27 @@ async def shutdown_event():
 
 
 @app.post("/process-query")
-async def process_query(query: str = Form()):
-    print(query, "received")
-    past = time.time()
+def process_query(query: str = Form()):
+    print(f'Query "{query}" received')
+    total_time = 0
 
-    doc_ids = index.get_query_intersection(query)
-    urls = index.get_urls(doc_ids)
+    with Timer("postings"):
+        postings = index.get_postings_from_query(query)
 
-    now = time.time()
-    print(f"{(now - past):.6f} seconds taken to process query")
+    with Timer("intersecting postings"):
+        intersecting = index._get_intersecting_postings(postings)
+
+    with Timer("doc amount"):
+        num_docs = index.get_doc_amount(postings)
+
+    with Timer("scores"):
+        scores = calculate_scores(query, postings, intersecting, num_docs)
+
+    with Timer("getting urls"):
+        docs = [k for k in list(scores.keys())[-10:]]
+        urls = index.get_urls(docs)
+
+    print(f"{Timer.total_time:.6f} seconds total".center(40, '='))
+    print(scores)
+
     return {"urls": urls}
