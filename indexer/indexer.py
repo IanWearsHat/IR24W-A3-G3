@@ -143,14 +143,24 @@ class Indexer:
 
             text = soup.get_text()  # get all text from webpage
 
+            tokens = [self.stemmer.stem(word) for word in alnum_iter(text)]
+
             num_words = 0
             iterator = alnum_iter(text)
-            for i, word in enumerate(iterator):  # iterate the word in the text
-                word = self.stemmer.stem(word)
+            bigrams = [' '.join(tokens[i:i+2]) for i in range(len(tokens)-1)]
+            trigrams = [' '.join(tokens[i:i+3]) for i in range(len(tokens)-2)]
+            with open("bigrams_trigrams.txt", "a", encoding="utf-8") as bt_file:
+                bt_file.write(f"Bigrams: {bigrams}\n")
+                bt_file.write(f"Trigrams: {trigrams}\n")
 
-                one_file_word_freq.setdefault(word, list())
+            all_tokens = tokens + bigrams + trigrams
+            for i, token in enumerate(all_tokens):  # iterate the word in the text
+                token = self.stemmer.stem(token)
 
-                posting = one_file_word_freq[word]
+                one_file_word_freq.setdefault(token, list())
+
+                posting = one_file_word_freq[token]
+
 
                 if len(posting) == 0:
                     posting.append(list())
@@ -158,10 +168,11 @@ class Indexer:
                     posting.append(0)
 
                     # word is marked important with a 1 as the 3rd element
-                    if word in important_words:
+                    if any(part in important_words for part in token.split()):
                         posting.append(1)
 
-                posting[0].append(i)
+                if i < len(tokens):  # Only count positions for unigrams
+                    posting[0].append(i)
                 posting[1] += 1
 
                 num_words += 1
