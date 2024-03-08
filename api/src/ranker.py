@@ -43,11 +43,26 @@ def add_tf_idf_scores(scores, postings, intersecting_postings, num_union_docs):
             scores[docID] += tf_idf
 
 
+def add_importance_scores(scores, intersecting_postings):
+    for docID in scores:
+        for token in intersecting_postings:
+            posting = intersecting_postings[token][docID]
+
+            try:
+                posting[3]
+                scores[docID] += 10
+            except:
+                continue
+
+
 def calculate_scores(postings, intersecting_postings, num_union_docs):
     scores = initailize_scores(intersecting_postings)
 
     add_tf_idf_scores(scores, postings, intersecting_postings, num_union_docs)
+    add_importance_scores(scores, intersecting_postings)
 
     # adapted from https://stackoverflow.com/questions/613183/how-do-i-sort-a-dictionary-by-value
-    scores = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
+    scores = {
+        k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    }
     return scores
