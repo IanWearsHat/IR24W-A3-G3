@@ -88,7 +88,7 @@ class Indexer:
         self._docID_file_name = "docID_to_file.json"
 
     def _update_docID_map(self, url, file_path):
-        self.docID_map[str(self.docID_count)] = str(file_path)
+        self.docID_map[str(self.docID_count)] = (url, str(file_path.name))
 
     def _update_inv_index(self, one_file_map):
         for token, posting in one_file_map.items():
@@ -139,7 +139,9 @@ class Indexer:
             important_words = set()
             important_tags = ["h1", "h2", "h3", "b", "strong", "title"]
             for tag in soup.find_all(important_tags):
-                important_words.update({self.stemmer.stem(word) for word in alnum_iter(tag.text.strip())})
+                important_words.update(
+                    {self.stemmer.stem(word) for word in alnum_iter(tag.text.strip())}
+                )
 
             text = soup.get_text()  # get all text from webpage
 
@@ -344,28 +346,6 @@ class Indexer:
         return self.docID_count
 
 
-def cosine_similarity(vec1, vec2):
-    """
-    Calculate the cosine similarity of two tf-idf score vector
-    - vec1: this is a numpy array which means the first tf-idf score vector of one document
-    - vec2: this is a numpy array which means the second tf-idf score vector of one document
-    Returns:
-    - cosine similarity as a float.
-    For example:
-    vec1 = np.array([1,2,3])
-    vec2 = np.array([4,5,6])
-    similarity = cosine_similarity(vec1, vec2)
-    the docunment is the content in json after we run the M1 part code.
-    """
-
-    dot_product = np.dot(vec1, vec2)
-    norm_vec1 = np.linalg.norm(vec1)
-    norm_vec2 = np.linalg.norm(vec2)
-    similarity = dot_product / (norm_vec1 * norm_vec2)
-    return similarity
-
-
-# TODO: adding extra credit to postings
 def main():
     """Creates the whole index"""
     indexer = Indexer("DEV")
