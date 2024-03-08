@@ -2,6 +2,7 @@ import pathlib
 from nltk.stem import PorterStemmer
 import orjson
 
+
 class Index:
     stemmer = PorterStemmer()
     posting_files = []
@@ -12,7 +13,7 @@ class Index:
 
     def __init__(self):
         self._open_index_files()
-    
+
     def _open_index_files(self):
         index_num = 0
         index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
@@ -27,21 +28,23 @@ class Index:
 
             index_num += 1
             index_path = pathlib.Path(f"../../index/{index_num}_merged.json")
-            positions_path = pathlib.Path(f"../../index/{index_num}_merged_positions.json")
-        
+            positions_path = pathlib.Path(
+                f"../../index/{index_num}_merged_positions.json"
+            )
+
         with open(pathlib.Path("../../index/token_to_index_num.json"), "rb") as f:
             self.master_token_map = orjson.loads(f.read())
-        
+
         with open(pathlib.Path("../../index/docID_to_file.json"), "rb") as f:
             self.docID_to_file_map = orjson.loads(f.read())
 
     def close_index_files(self) -> None:
         for file in self.posting_files:
             file.close()
-    
-    def _get_term_doc_ids(self, query):
+
+    def _get_posting(self, query):
         if query not in self.master_token_map:
-            return set()
+            return dict()
 
         index_num = self.master_token_map[query]
 
@@ -54,22 +57,46 @@ class Index:
         line = index_file.readline()
         posting = orjson.loads(line)
 
-        return set(posting.keys())
+        return posting
+    
+    def _key_in_all_postings(self, doc_id: int, postings: dict):
+        for posting in postings.values():
+            if doc_id not in posting:
+                return False
+            
+        return True
 
-    def get_query_intersection(self, query_string):
+    def _get_intersecting_postings(self, postings: dict):
+        if len(postings) <= 1:
+            return postings
+
+        min_term = next(iter(postings))
+        for posting in postings.values():
+            if len(posting) < len(min_term):
+                min_term = posting
+
+        return_dict = {}
+        for doc_id in postings[min_term].keys():
+            if self._key_in_all_postings(doc_id, postings):
+                for term in postings.keys():
+                    inner_postings = return_dict.setdefault(term, dict())
+                    inner_postings[doc_id] = postings[term][doc_id]
+        
+        return return_dict
+
+    def get_doc_posting_intersection_from_query(self, query_string: str):
         query_terms = query_string.split()
-        # stemmed_query_terms = [self.stemmer.stem(term) for term in query_terms]
 
-        postings_lists = []
+        postings = {}
         for term in query_terms:
             term = self.stemmer.stem(term)
 
-            docIDs = self._get_term_doc_ids(term)
-            postings_lists.append(docIDs)
+            posting = self._get_posting(term)
+            postings[term] = posting
 
-        common_doc_ids = set.intersection(*postings_lists) if postings_lists else set()
+        postings = self._get_intersecting_postings(postings)
 
-        return common_doc_ids
+        return postings
 
     def get_urls(self, doc_ids):
         urls = []
@@ -82,32 +109,25 @@ class Index:
                 content = orjson.loads(f.read())
                 urls.append(content["url"])
             i += 1
-                # print(len(content["content"]))
+            # print(len(content["content"]))
         return urls
 
 
 if __name__ == "__main__":
-    # index = Index("DEV_inv_index.json", "DEV_doc_ID_map.json")
-    # input_str = input("Input a query: ")
-    # while (input_str != "exit"):
-    #     doc_ids = index.get_query_intersection(input_str)
-    #     urls = index.get_top_urls(doc_ids)
-    #     for url in urls[:5]:
-    #         print(url)
-    #     input_str = input("Input a query: ")
     import time
 
-    query = "iftekhar ahmed"
     index = Index()
+
+    query = "iftekhar ahmed"
+    
 
     past = time.time()
 
-    doc_ids = index.get_query_intersection(query)
-    urls = index.get_urls(doc_ids)
+    postings = index.get_doc_posting_intersection_from_query(query)
 
     now = time.time()
     print(now - past, "seconds taken")
 
     index.close_index_files()
 
-    print(urls)
+    print(len(list(postings["iftekhar"].keys())))
