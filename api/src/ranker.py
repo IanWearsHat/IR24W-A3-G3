@@ -1,4 +1,5 @@
 """
+Postings structure:
 {
     "token1": {
         0: [[1, 2, 3, 4], term-freq, num-terms-in-doc],
@@ -9,7 +10,7 @@
         2: [[1, 2, 3, 4], term-freq, num-terms-in-doc]
     },
 
-    in terms of scoring, if there is an is-important flag, then add like 10 to the overall score
+    in terms of scoring, if there is an is-important flag, then add a large amount to the overall score
 }
 """
 
@@ -21,15 +22,15 @@ import math
 def cosine_similarity(vec1, vec2):
     """
     Calculate the cosine similarity of two tf-idf score vector
-    - vec1: this is a numpy array which means the first tf-idf score vector of one document
-    - vec2: this is a numpy array which means the second tf-idf score vector of one document
+    - vec1: numpy array containing the tf-idf score vector of one document
+    - vec2: numpy array containing the tf-idf score vector of another document
     Returns:
     - cosine similarity as a float.
-    For example:
-    vec1 = np.array([1,2,3])
-    vec2 = np.array([4,5,6])
-    similarity = cosine_similarity(vec1, vec2)
-    the docunment is the content in json after we run the M1 part code.
+
+    Example usage:
+        vec1 = np.array([1,2,3])
+        vec2 = np.array([4,5,6])
+        similarity = cosine_similarity(vec1, vec2)
     """
 
     dot_product = np.dot(vec1, vec2)
@@ -46,7 +47,8 @@ def cosine_similarity(vec1, vec2):
     return similarity
 
 
-def initialize_scores(intersecting_postings):
+def initialize_scores(intersecting_postings: dict) -> dict:
+    """Initializes all docIDs to have a score of 0"""
     if len(intersecting_postings) == 0:
         return {}
 
@@ -59,13 +61,10 @@ def initialize_scores(intersecting_postings):
     return scores
 
 
-def add_tf_idf_scores(query, scores, postings, intersecting_postings, num_union_docs):
-    stemmer = PorterStemmer()
-    query = query.split()
-    query = [stemmer.stem(term) for term in query]
-
+def _create_query_tf_idf_vector(
+    query: list, postings: dict, num_union_docs: int
+) -> list:
     query_vector = []
-    # make query vector
     for token in query:
         # tf score
         freq = query.count(token)
@@ -79,6 +78,13 @@ def add_tf_idf_scores(query, scores, postings, intersecting_postings, num_union_
         tf_idf = tf * idf
         query_vector.append(tf_idf)
 
+    return query_vector
+
+
+def _create_tf_idf_vectors(
+    scores: dict, postings: dict, intersecting_postings: dict, num_union_docs: int
+) -> dict:
+    """Creates tf-idf vectors for each doc"""
     tf_idf_vectors = {}
     for docID in scores:
         for token in intersecting_postings:
@@ -96,14 +102,34 @@ def add_tf_idf_scores(query, scores, postings, intersecting_postings, num_union_
             vec = tf_idf_vectors.setdefault(docID, list())
             vec.append(tf_idf)
 
+    return tf_idf_vectors
+
+
+def _add_tf_idf_scores(
+    query: str,
+    scores: dict,
+    postings: dict,
+    intersecting_postings: dict,
+    num_union_docs: int,
+) -> None:
+    """Adds tf-idf scores according to their cosine similarity to the query"""
+    stemmer = PorterStemmer()
+    query = query.split()
+    query = [stemmer.stem(term) for term in query]
+
+    query_vector = _create_query_tf_idf_vector(query, postings, num_union_docs)
+    tf_idf_vectors = _create_tf_idf_vectors(
+        scores, postings, intersecting_postings, num_union_docs
+    )
+
     for docID in tf_idf_vectors:
-        angle = cosine_similarity(
-            np.array(query_vector), np.array(tf_idf_vectors[docID])
-        )
+        doc_vec = tf_idf_vectors[docID]
+        angle = cosine_similarity(np.array(query_vector), np.array(doc_vec))
         scores[docID] += angle
 
 
-def add_importance_scores(scores, intersecting_postings):
+def _add_importance_scores(scores: dict, intersecting_postings: dict) -> None:
+    """Adds more score to docs that have an important token"""
     for docID in scores:
         for token in intersecting_postings:
             posting = intersecting_postings[token][docID]
@@ -115,23 +141,17 @@ def add_importance_scores(scores, intersecting_postings):
                 continue
 
 
-def calculate_scores(query, postings, intersecting_postings, num_union_docs):
+def calculate_scores(
+    query: str, postings: dict, intersecting_postings: dict, num_union_docs: int
+) -> dict:
+    """Calculates scores for all docIDs"""
     # TODO: probably need to normalize score if we add more
     scores = initialize_scores(intersecting_postings)
 
-    add_tf_idf_scores(query, scores, postings, intersecting_postings, num_union_docs)
-    add_importance_scores(scores, intersecting_postings)
+    _add_tf_idf_scores(query, scores, postings, intersecting_postings, num_union_docs)
+    _add_importance_scores(scores, intersecting_postings)
 
     # adapted from https://stackoverflow.com/questions/613183/how-do-i-sort-a-dictionary-by-value
     # sorting works because dictionaries remember insertion order
     scores = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1])}
     return scores
-
-
-# left off on 1. returning the urls to the frontend. 2. adding extra credit score calculations
-
-if __name__ == "__main__":
-    vec1 = np.array([0, 1])
-    vec2 = np.array([0, -1])
-    similarity = cosine_similarity(vec1, vec2)
-    print(similarity)
