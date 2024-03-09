@@ -1,7 +1,5 @@
 from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
-import numpy as np
-import math
 import pathlib
 import shutil
 import orjson
@@ -28,7 +26,19 @@ Partial Index 0: "
     {docID: [[3, 4, 8, ... , position],number of docs token appears in,number of words in doc],docID2: [[other positions],number of docs token appears in,number of words in doc2]}
     "
 - each line corresponds to a token's posting
-- posting format is shown at bottom
+- posting format is shown here:
+    {
+        docID: [
+            [3, 4, 8, ... , position of token in doc],
+            number of times in doc token appears,
+            number of words in doc2
+        ],
+        docID2: [
+            [other positions],
+            number of times in doc token appears,
+            number of words in doc2
+        ]
+    }
 
 Partial Index 0 positions: {
     "token": 0,
@@ -37,29 +47,12 @@ Partial Index 0 positions: {
 }
 
 - after getting a token's position and seeking to it, read the whole line
-- json.loads the line and do the normal things with it
-
-{
-    docID: [
-        [3, 4, 8, ... , position of token in doc],
-        number of times in doc token appears,
-        number of words in doc2
-    ],
-    docID2: [
-        [other positions],
-        number of times in doc token appears,
-        number of words in doc2
-    ]
-}
-
-
-"Merging"
-- 
+- this gets that token's posting
 """
-# TODO: text in bold, in headings, and in titles should be treated as more important
 
 
 def alnum_iter(input_string):
+    """Generator that yields the next alphanumeric sequence in an input_string"""
     current_sequence = ""
     for char in input_string:
         if char.isalnum():
@@ -72,6 +65,15 @@ def alnum_iter(input_string):
 
 
 class Indexer:
+    """
+    For creating the index.
+
+    From Assignment 3 spec for Algorithms and Data Structures Developer (pg 3):
+        "Your index should be stored in one or more files in the file system (no databases!)."
+    
+    Thus, the index is comprised of multiple files.
+    """
+
     stemmer = PorterStemmer()
 
     inv_index = dict()
@@ -87,29 +89,33 @@ class Indexer:
         self._dir_name = dir_name
         self._docID_file_name = "docID_to_file.json"
 
-    def _update_docID_map(self, url, file_path):
+    def _update_docID_map(self, url: str, file_path: pathlib.Path) -> None:
+        """Maps the current docID to its url and file_path"""
         self.docID_map[str(self.docID_count)] = (url, str(file_path.name))
 
-    def _update_inv_index(self, one_file_map):
+    def _update_inv_index(self, one_file_map: dict) -> None:
+        """
+        Updates a token's posting in the inverted index given
+        a token to posting mapping from one file.
+
+        If the token does not exist in the inverted index,
+        the token will be initialized with an empty dict
+        and an empty list for its posting.
+        """
         for token, posting in one_file_map.items():
             token_doc_dict = self.inv_index.setdefault(token, dict())
             posting_list = token_doc_dict.setdefault(str(self.docID_count), list())
             for elem in posting:
                 posting_list.append(elem)
 
-    def _update_tf_idf_scores(self):
-        for posting_dict in self.inv_index.values():
-            num_docs = len(posting_dict.values())
-            idf_score = math.log(self._total_doc_count / num_docs)
-            for posting_list in posting_dict.values():
-                # posting_list[2] is initially the total number of words in the document
-                tf_score = posting_list[1] / posting_list[2]
-                tf_idf_score = tf_score * idf_score
-                posting_list[2] = tf_idf_score
-
-    def _get_one_file_token_freq(self, file_path):
+    def _get_one_file_token_freq(self, file_path: pathlib.Path) -> dict:
         """
-        Parse one file
+        Parses one file for its alphanumeric tokens and their postings.
+        Also marks whether or not a word is in an important tag like
+        title or h1.
+
+        If the webpage is not html, the function will return None.
+
         :param file_path: the input file path
         :return: the url, word frequency in the file
         """
@@ -151,7 +157,6 @@ class Indexer:
                 word = self.stemmer.stem(word)
 
                 one_file_word_freq.setdefault(word, list())
-
                 posting = one_file_word_freq[word]
 
                 if len(posting) == 0:
@@ -168,16 +173,20 @@ class Indexer:
 
                 num_words += 1
 
-            # initially make posting[2] the number of words in the text
-            # This will be changed when update_tf_idf_scores is called
             for posting in one_file_word_freq.values():
                 posting[2] = num_words
 
         return url, one_file_word_freq
 
-    def _write_partial_index_to_file(self, posting_dict, index_num):
-        """Note: also opens files and does not close them as they will be used in merging.
-        The files must be closed with the close_partial_index_files function"""
+    def _write_partial_index_to_file(self, posting_dict: dict, index_num: int) -> None:
+        """
+        Writes an entire index's postings to one file.
+        Also writes the seek position of each token's posting to another file for
+        future bookkeeping.
+
+        Note: also opens files and does not close them as they will be used in merging.
+        The files must be closed with the close_partial_index_files function
+        """
         positions = {}
         index_f = open(f"./index/{index_num}.json", "wb+")
         for token, posting in posting_dict.items():
@@ -190,13 +199,18 @@ class Indexer:
         self.positions_dicts.append(positions)
         self.posting_files.append(index_f)
 
-    def _write_dict_to_file(self, data_dict, file_name):
+    def _write_dict_to_file(self, data_dict: dict, file_name: str) -> None:
         """Writes a dict to a file as json"""
         json_data = orjson.dumps(data_dict)
         with open("./index/" + file_name, "wb") as json_writer:
             json_writer.write(json_data)
 
     def create_index(self) -> None:
+        """
+        Creates all unmerged partial indexes by looking at entire corpus
+
+        Will not open a file if its size is too big.
+        """
         # if index directory exists, delete it and all its contents, then create the empty directory again
         index_dir = pathlib.Path("./index/")
         if index_dir.exists():
@@ -235,6 +249,7 @@ class Indexer:
         self._write_dict_to_file(self.docID_map, self._docID_file_name)
 
     def merge_indexes(self) -> None:
+        """Merges all unmerged partial indexes."""
         seen = set()
 
         final_index_num = 0
@@ -280,6 +295,9 @@ class Indexer:
                 final_token_map[token] = final_index_num
                 final_index.update({token: token_posting})
 
+                # If a certain number of tokens reached, write to a merged partial index
+                # and write postions to a merged positions index.
+                # Then, clear final_index to free memory
                 token_count += 1
                 if token_count % 2048 == 0:
                     w_positions = {}
@@ -305,6 +323,7 @@ class Indexer:
 
                     final_index = {}
 
+        # Final write to file for any leftover postings
         positions = {}
         with open(f"./index/{final_index_num}_merged.json", "wb") as final_index_f:
             for token, posting in final_index.items():
@@ -320,15 +339,18 @@ class Indexer:
             to_write = orjson.dumps(positions)
             final_positions_f.write(to_write)
 
+        # Create a mapping of tokens to their merged partial index for bookkeeping
         with open("./index/token_to_index_num.json", "wb") as f:
             to_write = orjson.dumps(final_token_map)
             f.write(to_write)
 
     def close_partial_index_files(self) -> None:
+        """Closes all open files from _write_partial_index_to_file"""
         for file in self.posting_files:
             file.close()
 
     def delete_unsorted_partial_indexes(self) -> None:
+        """Deletes all unmerged partial indexes. Should be called after merging."""
         for i in range(len(self.posting_files)):
             pathlib.Path(f"./index/{i}.json").unlink()
 
@@ -348,7 +370,7 @@ class Indexer:
 
 def main():
     """Creates the whole index"""
-    indexer = Indexer("DEV")
+    indexer = Indexer("ANALYST")
 
     indexer.create_index()
     indexer.merge_indexes()

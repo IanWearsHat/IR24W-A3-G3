@@ -1,30 +1,12 @@
 from fastapi import FastAPI, Form
-from index import Index
-from ranker import calculate_scores
 import time
 
-"""
-structure for document return object:
-    {
-        "docs": [
-            {
-                "title": doc_title,
-                "url": url,
-                "content": first 50 words or so
-                "file_path": path           # for the AI to read and summarize
-            },
-            {
-                "title": doc_title,
-                "url": url,
-                "content": first 50 words or so
-                "file_path": path           # for the AI to read and summarize
-            },
-        ]
-    }
-"""
+from index import Index
+from ranker import calculate_scores
 
 
 class Timer:
+    """Context manager for timing code and counting total time"""
     total_time = 0
 
     def __init__(self, message):
@@ -56,14 +38,14 @@ async def shutdown_event():
 
 @app.post("/process-query")
 def process_query(query: str = Form()):
+    """Gets and ranks urls given a query. Also times query processing time."""
     print(f'Query "{query}" received')
-    total_time = 0
 
     with Timer("postings"):
         postings = index.get_postings_from_query(query)
 
     with Timer("intersecting postings"):
-        intersecting = index._get_intersecting_postings(postings)
+        intersecting = index.get_intersecting_postings(postings)
 
     with Timer("doc amount"):
         num_docs = index.get_doc_amount(postings)
@@ -75,7 +57,10 @@ def process_query(query: str = Form()):
         docs = [k for k in list(scores.keys())[-10:]]
         urls = index.get_urls(docs)
 
-    print(f"{Timer.total_time:.6f} seconds total".center(40, '='))
-    print(scores)
+    print(f"{Timer.total_time:.6f} seconds total".center(40, "="))
+    
+    # reset total time when done timing
+    total_time = Timer.total_time
+    Timer.total_time = 0
 
-    return {"urls": urls}
+    return {"urls": urls, "time": total_time}
