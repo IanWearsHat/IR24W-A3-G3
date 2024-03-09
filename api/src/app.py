@@ -7,6 +7,7 @@ from ranker import calculate_scores
 
 class Timer:
     """Context manager for timing code and counting total time"""
+
     total_time = 0
 
     def __init__(self, message):
@@ -56,9 +57,10 @@ def process_query(query: str = Form()):
     with Timer("getting urls"):
         docs = [k for k in list(scores.keys())[-10:]]
         urls = index.get_urls(docs)
+        urls = urls[::-1]
 
     print(f"{Timer.total_time:.6f} seconds total".center(40, "="))
-    
+
     # reset total time when done timing
     total_time = Timer.total_time
     Timer.total_time = 0

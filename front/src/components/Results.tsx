@@ -1,5 +1,7 @@
+import "./Results.css";
+
 interface ResultsProps {
-  results: Record<string, Array<string>>;
+  results: Record<string, Array<string> | number>;
 }
 
 export default function Results({ results }: ResultsProps) {
@@ -8,19 +10,27 @@ export default function Results({ results }: ResultsProps) {
 
   const resultsStrings = () => {
     if (JSON.stringify(results) == "{}") {
-      return <p>Nothin' yet...</p>;
+      return <p>Nothin'. No results yet...</p>;
     }
-    return results.urls.map((url, index) => (
-      <div key={index}>
-        <p>{url}</p>
-      </div>
-    ));
+    return (
+      <>
+        {typeof results.time === "number" && (
+          <p style={{ marginBottom: "3em" }}>
+            {(1000 * results.time).toFixed(6)} ms taken
+          </p>
+        )}
+        {Array.isArray(results.urls) &&
+          results.urls.map((url, index) => (
+            <div key={index}>
+              <p>
+                {index + 1}.{" "}
+                <span style={{ color: "rgb(26, 98, 192)" }}>{url}</span>
+              </p>
+            </div>
+          ))}
+      </>
+    );
   };
 
-  console.log(JSON.stringify(results) == "{}");
-  return (
-    <div>
-      {resultsStrings()}
-    </div>
-  );
+  return <div className="results">{resultsStrings()}</div>;
 }

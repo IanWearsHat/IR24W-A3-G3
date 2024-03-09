@@ -14,7 +14,7 @@ function App() {
       web GUI - from last slide of Lecture 14 */}
       <SearchBar onQueryProcessed={setResults} />
       <Results results={results} />
-      <Summary />
+      {/* <Summary /> */}
     </>
   );
 }

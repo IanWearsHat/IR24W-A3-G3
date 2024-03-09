@@ -1,4 +1,5 @@
 import { getRandomQuery } from "../utils/getRandomQuery";
+import "./SearchBar.css";
 
 interface SearchBarProps {
   onQueryProcessed: (docs: Record<string, Array<string>>) => void;
@@ -16,16 +17,26 @@ export default function SearchBar({ onQueryProcessed }: SearchBarProps) {
       body: formData,
     })
       .then((resp) => resp.json())
-      .then((data) => onQueryProcessed(data));
+      .then((data) => {
+        console.log(data);
+        onQueryProcessed(data);
+      });
   };
 
   return (
-    <form onSubmit={handleSubmit} action="/api/process-query" method="post">
-      <input
-        name="query"
-        placeholder={"Search for " + getRandomQuery()}
-      ></input>
-      <button>Search</button>
-    </form>
+    <div className="bar">
+      <img
+        src="https://preview.redd.it/w82j6chvnv131.png?width=1080&crop=smart&auto=webp&s=cdd336114b22bef9877b372064adb423f8101bdc"
+        width={300}
+      />
+      <form onSubmit={handleSubmit} action="/api/process-query" method="post">
+        <input
+          name="query"
+          size={100}
+          placeholder={"Search for " + getRandomQuery()}
+        ></input>
+        <button>Search</button>
+      </form>
+    </div>
   );
 }

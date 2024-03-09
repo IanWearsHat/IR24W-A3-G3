@@ -1,0 +1,19 @@
+input {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-size: 20px;
+}
+
+button {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-size: 20px;
+}
+
+img {
+    margin: 1em;
+    margin-right: 2em;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+}
