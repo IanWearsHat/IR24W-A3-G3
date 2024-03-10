@@ -384,7 +384,7 @@ class Indexer:
 
 def main():
     """Creates the whole index"""
-    indexer = Indexer("ANALYST")
+    indexer = Indexer("DEV")
 
     indexer.create_index()
     indexer.merge_indexes()

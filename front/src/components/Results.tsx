@@ -19,6 +19,9 @@ export default function Results({ results }: ResultsProps) {
             {(1000 * results.time).toFixed(6)} ms taken
           </p>
         )}
+        {Array.isArray(results.urls) && results.urls.length == 0 && (
+          <p>No relevant documents found</p>
+        )}
         {Array.isArray(results.urls) &&
           results.urls.map((url, index) => (
             <div key={index}>

@@ -50,6 +50,11 @@ def process_query(query: str = Form()):
 
     with Timer("doc amount"):
         num_docs = index.get_doc_amount(postings)
+    
+    if num_docs == 0:
+        total_time = Timer.total_time
+        Timer.total_time = 0
+        return {"urls": [], "time": total_time}
 
     with Timer("scores"):
         scores = calculate_scores(query, postings, intersecting, num_docs)
