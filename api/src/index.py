@@ -7,6 +7,7 @@ from ranker import calculate_scores
 
 class Index:
     """Represents the entire inverted index"""
+
     stemmer = PorterStemmer()
     posting_files = []
     positions_files = []
@@ -68,12 +69,12 @@ class Index:
         posting = orjson.loads(line)
 
         return posting
-    
+
     def _is_key_in_all_postings(self, doc_id: int, postings: dict) -> bool:
         for posting in postings.values():
             if doc_id not in posting:
                 return False
-            
+
         return True
 
     def get_intersecting_postings(self, postings: dict) -> dict:
@@ -92,7 +93,7 @@ class Index:
                 for term in postings.keys():
                     inner_postings = return_dict.setdefault(term, dict())
                     inner_postings[doc_id] = postings[term][doc_id]
-        
+
         return return_dict
 
     def get_postings_from_query(self, query_string: str) -> dict:
@@ -104,7 +105,7 @@ class Index:
 
             posting = self._get_posting(term)
             postings[term] = posting
-        
+
         return postings
 
     def get_doc_amount(self, postings: dict) -> int:
@@ -131,7 +132,6 @@ if __name__ == "__main__":
 
     query = "html"
 
-
     past = time.time()
 
     postings = index.get_postings_from_query(query)
@@ -151,7 +151,5 @@ if __name__ == "__main__":
     # print(len(list(intersecting["acm"].keys())))
     print(scores)
     print(docs)
-
-    
 
     # bad query probably uci bc it retrieves a lot more documents

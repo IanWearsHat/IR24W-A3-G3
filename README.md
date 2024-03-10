@@ -12,6 +12,8 @@ Henry Wang - penghanw - 85703671
 
 ## For Python code:
 
+Ensure [Python](https://www.python.org/downloads/) is installed
+
 1. Run 
 ```bash
 cd api
@@ -40,25 +42,54 @@ You must be in the ```indexer``` folder in order to run Milestone1.py
 
 Make sure you have the DEV folder of all the web pages in the indexer folder
 
-## For backend AI:
-From root directory
+## For backend:
+1. From root directory
+
+Run
+```bash
 cd api
+cd src
+```
 
-1. 
-Get .env file from someone
-Or create one on your own with a Google MakerSuite API key
-Set like so: ```GOOGLE_API_KEY=your_key```
+2. Run
+```bash
+python main.py
+```
 
-Either way, put .env file in the api folder
+or 
+```bash
+python3 main.py
+```
 
-python src/main.py
 
 ## For Frontend:
-1. Install npm
+1. Install Node and npm [here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
 2. 
-run cd front
+From root directory
 
-run npm install
+Run
+```bash
+cd front
+```
 
-run npm run dev
+Run
+```bash
+npm install
+```
+
+Run
+```bash
+npm run dev
+```
+
+A server will start at http://localhost:5173/ (or 127.0.0.1:5173)
+
+## Making a query
+Open a browser and navigate to http://localhost:5173/ (or 127.0.0.1:5173)
+
+The page should look something like this
+
+![Search engine home](https://i.imgur.com/LYsWQSO.png)
+
+Simply enter a query into the search bar at the top and click Search

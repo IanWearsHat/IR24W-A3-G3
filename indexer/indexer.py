@@ -178,6 +178,8 @@ class Indexer:
                     # word is marked important with a 1 as the 3rd element
                     if any(part in important_words for part in token.split()):
                         posting.append(1)
+                    else:
+                        posting.append(0)
 
                 if i < len(tokens):  # Only count positions for unigrams
                     posting[0].append(i)
