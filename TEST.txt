@@ -1,0 +1,30 @@
+Bad queries:
+-cs
+-Html
+-body
+-University 
+-Word
+-program
+-document
+-Stats
+-stat
+-Off
+These queries all did poorly because the search engine finds all documents that have these words. Because these queries contain words that appear in nearly all documents, the ranking and retrieval of all documents takes a lot longer than an intersection of words that result in fewer documents.
+
+For example, “university” would retrieve nearly all documents and the search engine would have to score more documents compared to “Implementation of information retrieval” which has fewer documents to score.
+
+Good queries
+-Iftekhar ahmed
+-Machine learning
+-Software engineering
+-Information retrieval
+-Python programming 
+-Database management system
+-Implementation of information retrieval
+-Requirement engineering
+-Big O notation
+-Cable channel
+
+These queries are considered good for their clarity, which allows the search engines to easily understand the user’s intent and retrieve related information. These queries are also related to the interests and needs of the users within the ICS domain, which leads to searching results with good value. 
+For example Big O notation is a well defined topic and is closely related to ics domain. The search engine  will provide a wealth of information that matches the needs of users of ics domain who want all the information about big O notation.
+There are also fewer documents that will match these queries as more terms reduces the amount of returned documents. Scoring will therefore take less time and improve the search engine's performance.
