@@ -14,11 +14,6 @@ export default function Results({ results }: ResultsProps) {
     }
     return (
       <>
-        {typeof results.time === "number" && (
-          <p style={{ marginBottom: "3em" }}>
-            {(1000 * results.time).toFixed(6)} ms taken
-          </p>
-        )}
         {Array.isArray(results.urls) && results.urls.length == 0 && (
           <p>No relevant documents found</p>
         )}

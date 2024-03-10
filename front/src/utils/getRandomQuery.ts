@@ -17,6 +17,14 @@ export function getRandomQuery() {
     "what are centimeters",
     "chicken and broccoli",
     "I shop so much I can speak Italian",
+    "Pho Real",
+    "cheese",
+    "albatross and ants",
+    "world stop turning",
+    "undertale",
+    "deltarune",
+    "Notch",
+    "WHY ISNT IT WORKING!!1?"
   ];
   const i = Math.floor(Math.random() * queries.length);
   return queries[i];

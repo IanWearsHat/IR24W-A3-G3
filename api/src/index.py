@@ -123,33 +123,3 @@ class Index:
             urls.append(self.docID_to_file_map[doc_id][0])
         return urls
         # if using the filepath, add "indexer\\DEV\\" to the path
-
-
-if __name__ == "__main__":
-    import time
-
-    index = Index()
-
-    query = "html"
-
-    past = time.time()
-
-    postings = index.get_postings_from_query(query)
-    intersecting = index.get_intersecting_postings(postings)
-    num_docs = index.get_doc_amount(postings)
-
-    scores = calculate_scores(query, postings, intersecting, num_docs)
-
-    docs = [k for k in list(scores.keys())[-10:]]
-
-    now = time.time()
-    print(now - past, "seconds taken")
-
-    index.close_index_files()
-
-    # print(num_docs)
-    # print(len(list(intersecting["acm"].keys())))
-    print(scores)
-    print(docs)
-
-    # bad query probably uci bc it retrieves a lot more documents
