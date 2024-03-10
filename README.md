@@ -19,28 +19,48 @@ Ensure [Python](https://www.python.org/downloads/) is installed
 cd api
 ```
 
-2. Run 
+2. Create a virtual environment so that dependencies do not conflict
 ```bash
 python -m venv .venv
 ```
 
-3. Run 
-```bash
-.\.venv\scripts\activate
-```
+3. Activate virtual environment
 
-3. Run
+   VS Code may prompt to automatically select the newly created virtual environment.
+   Otherwise, for Mac/Linux, run
+
+   ```shell
+   source .venv/bin/activate
+   ```
+   and for Windows, run
+
+   ```shell
+   .\.venv\scripts\activate
+   ```
+
+3. To install dependencies, run
 ```bash
 pip install -r requirements.txt
 ```
 
-You can now run any python code here.
+You can now run any python code.
 
-For indexer, ```cd indexer``` and run Milestone1.py.
+## For creating index
+Ensure you are in the root directory and that you have the all of the webpages in one folder labeled "DEV" in the indexer folder
 
-You must be in the ```indexer``` folder in order to run Milestone1.py
+Like so:
 
-Make sure you have the DEV folder of all the web pages in the indexer folder
+![Indexer folder structure](https://i.imgur.com/ZeaYNST.png)
+
+To start creating the index, run
+```bash
+python indexer\indexer.py
+```
+
+or
+```bash
+python3 indexer\indexer.py
+```
 
 ## For backend:
 1. From root directory
