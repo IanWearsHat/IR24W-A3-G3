@@ -28,5 +28,5 @@ Good queries
 -Cable channel
 
 These queries are considered good for their clarity, which allows the search engines to easily understand the user’s intent and retrieve related information. These queries are also related to the interests and needs of the users within the ICS domain, which leads to searching results with good value. 
-For example Big O notation is a well defined topic and is closely related to ics domain. The search engine  will provide a wealth of information that matches the needs of users of ics domain who want all the information about big O notation.
+For example, Big O notation is a well defined topic and is closely related to ICS domain. The search engine  will provide a wealth of information that matches the needs of users of ics domain who want all the information about big O notation.
 There are also fewer documents that will match these queries as more terms reduces the amount of returned documents. Scoring will therefore take less time and improve the search engine's performance.
