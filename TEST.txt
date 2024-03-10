@@ -12,6 +12,8 @@ Bad queries:
 These queries all did poorly because the search engine finds all documents that have these words. Because these queries contain words that appear in nearly all documents, the ranking and retrieval of all documents takes a lot longer than an intersection of words that result in fewer documents.
 
 For example, “university” would retrieve nearly all documents and the search engine would have to score more documents compared to “Implementation of information retrieval” which has fewer documents to score.
+We simply cut off the first 10 urls to return and also tried to improve the index to be able to point to terms using file.seek.
+
 
 Good queries
 -Iftekhar ahmed
